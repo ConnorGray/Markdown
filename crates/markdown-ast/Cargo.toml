@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 pulldown-cmark = "0.9.1"
+
+[dev-dependencies]
+indoc = "1.0.3"
+pretty_assertions = "1.1.0"
