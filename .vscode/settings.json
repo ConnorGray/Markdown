@@ -1,4 +1,6 @@
 {
-    "editor.formatOnSave": true,
-    "editor.formatOnSaveMode": "file"
+    "[rust]": {
+        "editor.formatOnSave": true,
+        "editor.formatOnSaveMode": "file"
+    }
 }
