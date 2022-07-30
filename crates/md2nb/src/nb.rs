@@ -1,8 +1,7 @@
-use pulldown_cmark::HeadingLevel;
+use markdown_ast::{Block, HeadingLevel, ListItem, Text, TextSpan, TextStyle};
 
 use wolfram_expr::{Expr, Symbol};
 
-use crate::ast::{Block, ListItem, Text, TextSpan, TextStyle};
 
 #[derive(Debug, Clone)]
 pub struct Options {

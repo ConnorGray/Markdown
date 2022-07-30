@@ -17,7 +17,7 @@ categories = ["encoding", "visualization", "development-tools"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pulldown-cmark = "0.9.1"
+markdown-ast = { path = "../markdown-ast" }
 
 wolfram-app-discovery = "0.2.1"
 wolfram-expr = "0.1.1"

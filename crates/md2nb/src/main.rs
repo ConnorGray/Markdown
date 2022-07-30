@@ -1,4 +1,3 @@
-mod ast;
 mod nb;
 
 
@@ -44,7 +43,7 @@ fn main() -> Result<(), kernel::Error> {
     let contents: String =
         std::fs::read_to_string(&input).expect("failed to read input file");
 
-    let ast = ast::parse_markdown_to_ast(&contents);
+    let ast = markdown_ast::parse(&contents);
 
     /* For debugging.
     println!("\n\n===== AST =====\n");

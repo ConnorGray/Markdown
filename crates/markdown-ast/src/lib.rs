@@ -10,9 +10,11 @@ mod unflatten;
 
 use std::{collections::HashSet, mem};
 
-use pulldown_cmark::{self as md, Event, HeadingLevel, LinkType, Tag};
+use pulldown_cmark::{self as md, Event, LinkType, Tag};
 
 use self::unflatten::UnflattenedEvent;
+
+pub use pulldown_cmark::HeadingLevel;
 
 //======================================
 // AST Representation
@@ -75,6 +77,10 @@ pub enum TextStyle {
 //======================================
 // AST Builder
 //======================================
+
+pub fn parse(input: &str) -> Vec<Block> {
+    parse_markdown_to_ast(input)
+}
 
 pub(crate) fn parse_markdown_to_ast(input: &str) -> Vec<Block> {
     /* For Markdown parsing debugging.

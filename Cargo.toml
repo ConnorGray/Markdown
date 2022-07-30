@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "./crates/markdown-ast",
+    "./crates/md2nb"
+]
