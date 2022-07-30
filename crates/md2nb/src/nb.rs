@@ -1,4 +1,4 @@
-use markdown_ast::{Block, HeadingLevel, ListItem, Text, TextSpan, TextStyle};
+use markdown_ast::{Block, HeadingLevel, Inline, Inlines, ListItem, TextStyle};
 
 use wolfram_expr::{Expr, Symbol};
 
@@ -32,12 +32,12 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
 
             vec![Expr::normal(
                 Symbol::new("System`Cell"),
-                vec![text_to_text_data(text), Expr::from(style)],
+                vec![inlines_to_text_data(text), Expr::from(style)],
             )]
         },
         Block::Paragraph(text) => vec![Expr::normal(
             Symbol::new("System`Cell"),
-            vec![text_to_text_data(text), Expr::from("Text")],
+            vec![inlines_to_text_data(text), Expr::from("Text")],
         )],
         Block::List(items) => {
             let mut list_cells = Vec::new();
@@ -151,10 +151,13 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
 
             let header_row = headers
                 .into_iter()
-                .map(|content: Text| {
+                .map(|content: Inlines| {
                     Expr::normal(
                         Symbol::new("System`Cell"),
-                        vec![text_to_text_data(content), Expr::from("Subsubsubsection")],
+                        vec![
+                            inlines_to_text_data(content),
+                            Expr::from("Subsubsubsection"),
+                        ],
                     )
                 })
                 .collect();
@@ -164,10 +167,10 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
             for row_content in rows {
                 let row: Vec<Expr> = row_content
                     .into_iter()
-                    .map(|content: Text| {
+                    .map(|content: Inlines| {
                         Expr::normal(
                             Symbol::new("System`Cell"),
-                            vec![text_to_text_data(content), Expr::from("Text")],
+                            vec![inlines_to_text_data(content), Expr::from("Text")],
                         )
                     })
                     .collect();
@@ -300,7 +303,7 @@ fn list_item_to_cells(state: &mut State, ListItem(blocks): ListItem) -> Vec<Expr
 
                 cells.push(Expr::normal(
                     Symbol::new("System`Cell"),
-                    vec![text_to_text_data(text), Expr::from(style)],
+                    vec![inlines_to_text_data(text), Expr::from(style)],
                 ));
             },
             Block::List(items) => {
@@ -332,17 +335,17 @@ fn list_item_to_cells(state: &mut State, ListItem(blocks): ListItem) -> Vec<Expr
 }
 
 /// Returns a `TextData[{...}]` expression.
-fn text_to_text_data(text: Text) -> Expr {
-    Expr::normal(Symbol::new("System`TextData"), vec![text_to_boxes(text)])
+fn inlines_to_text_data(inlines: Inlines) -> Expr {
+    Expr::normal(Symbol::new("System`TextData"), vec![text_to_boxes(inlines)])
 }
 
 // Returns a `RowBox[{...}]` expression.
-fn text_to_boxes(text: Text) -> Expr {
+fn text_to_boxes(text: Inlines) -> Expr {
     let mut row = Vec::new();
 
     for span in text {
         match span {
-            TextSpan::Text(text, styles) => {
+            Inline::Text(text, styles) => {
                 let mut style_rules: Vec<Expr> = Vec::new();
 
                 for style in styles {
@@ -370,11 +373,11 @@ fn text_to_boxes(text: Text) -> Expr {
 
                 row.push(expr);
             },
-            TextSpan::Code(code) => row.push(Expr::normal(
+            Inline::Code(code) => row.push(Expr::normal(
                 Symbol::new("System`StyleBox"),
                 vec![Expr::string(code), Expr::string("Code")],
             )),
-            TextSpan::Link { label, destination } => row.push(Expr::normal(
+            Inline::Link { label, destination } => row.push(Expr::normal(
                 Symbol::new("System`ButtonBox"),
                 vec![
                     text_to_boxes(label),
@@ -410,8 +413,8 @@ fn text_to_boxes(text: Text) -> Expr {
                     ),
                 ],
             )),
-            TextSpan::SoftBreak => row.push(Expr::string(" ")),
-            TextSpan::HardBreak => row.push(Expr::string("\n")),
+            Inline::SoftBreak => row.push(Expr::string(" ")),
+            Inline::HardBreak => row.push(Expr::string("\n")),
         }
     }
 
