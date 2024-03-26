@@ -1,9 +1,9 @@
-//! Parse a Markdown input string into a sequence of Markdown abstract syntax tree
-//! [`Block`]s.
+//! Parse a Markdown input string into a sequence of Markdown abstract syntax
+//! tree [`Block`]s.
 //!
-//! This module compensates for the fact that the `pulldown-cmark` crate is focused on
-//! efficient incremental output (pull parsing), and consequently doesn't provide it's own
-//! AST types.
+//! This module compensates for the fact that the `pulldown-cmark` crate is
+//! focused on efficient incremental output (pull parsing), and consequently
+//! doesn't provide it's own AST types.
 
 mod unflatten;
 
