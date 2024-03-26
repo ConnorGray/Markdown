@@ -25,3 +25,8 @@ at your option.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
+
+### Developer Notes
+
+See [**Development.md**](./docs/Development.md) for instructions on how to
+perform common development tasks when contributing to this repository.
