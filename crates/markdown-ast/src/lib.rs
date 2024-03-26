@@ -230,7 +230,8 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                     Tag::Paragraph => {
                         text_spans.extend(unwrap_text(events, Default::default()))
                     },
-                    Tag::List(_) => {
+                    // TODO: Include the list start number in the metadata
+                    Tag::List(_start) => {
                         let mut items: Vec<ListItem> = Vec::new();
 
                         for event in events {
