@@ -1,0 +1,46 @@
+[config]
+default_to_workspace = false
+
+#---------------------------------------
+# Development tasks
+#---------------------------------------
+
+#
+# Define `$ cargo make install`
+#
+[tasks.paclet-install]
+dependencies = ["paclet"]
+command = "wolfram-cli"
+# TODO: Fix this hard-coded version number.
+args = ["paclet", "install", "build/ConnorGray__Markdown-0.0.1.paclet"]
+
+#
+# Define `$ cargo make paclet`
+#
+[tasks.paclet]
+dependencies = ["build-library-resources"]
+command = "wolfram-cli"
+args = ["paclet", "build", "./paclets/Markdown", "./build"]
+
+[tasks.paclet-test]
+dependencies = ["build-library-resources"]
+command = "wolfram-cli"
+args = ["paclet", "test", "./paclets/Markdown", "./paclets/Markdown/Tests"]
+
+#---------------------------------------
+# Helper tasks
+#---------------------------------------
+
+[tasks.build-library-resources]
+script = '''
+set -euo pipefail
+
+cargo build --release
+
+# FIXME: Don't hard-code the SystemID directory here
+SystemID="MacOSX-ARM64"
+
+mkdir -p ./paclets/Markdown/LibraryResources/$SystemID/
+
+cp ./target/release/libwolfram_markdown_link.dylib ./paclets/Markdown/LibraryResources/$SystemID/
+'''

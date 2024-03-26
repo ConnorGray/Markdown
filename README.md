@@ -4,10 +4,21 @@ This repository contains code and tools for processing Markdown from Wolfram.
 
 ## File Overview
 
-* [`./crates/md2nb/`](./crates/md2nb) contains the source code for the
+* [`./crates/markdown-ast`](./crates/markdown-ast/): source code for the
+  general-purpose `markdown-ast` crate.
+
+* [`./crates/md2nb/`](./crates/md2nb): source code for the
   [`md2nb`](https://crates.io/crates/md2nb) command-line utility.
-* [`./Markdown/`](./Markdown/) contains the source code for the
+
+* [`./crates/wolfram-markdown-link`](./crates/wolfram-markdown-link/): source
+  code for the LibraryLink library used by the Markdown paclet.
+
+* [`./paclets/Markdown/`](./Markdown/): source code for the
   `ConnorGray/Markdown` paclet.
+
+* [`third-party/commonmark-spec/`](./third-party/): git submodule of the
+  [commonmark-spec](https://github.com/commonmark/commonmark-spec/) repository.
+  Used by the `markdown-ast` conformance tests.
 
 ## License
 

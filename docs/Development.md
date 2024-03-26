@@ -8,12 +8,36 @@ constituent Development.md files:
 
 * [crates/md2nb/docs/Development.md](../crates/md2nb/docs/Development.md)
 
+## Setup
+
+The [`cargo make`](https://github.com/sagiegurari/cargo-make) and unofficial
+[`wolfram-cli`](https://github.com/ConnorGray/wolfram-cli) tools must be
+installed to run the development commands below.
+
 ## Command Quick Reference
 
-#### Run the crate tests
+#### Run the crate tests:
 
 ```shell
 $ cargo test
+```
+
+#### Build the Markdown paclet
+
+```shell
+$ cargo make paclet
+```
+
+#### Build and install the Markdown paclet
+
+```shell
+$ cargo make paclet-install
+```
+
+#### Run the Markdown paclet tests
+
+```shell
+$ cargo make paclet-test
 ```
 
 #### markdown-ast: Run the CommonMark conformance tests

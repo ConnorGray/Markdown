@@ -1,1 +1,6 @@
 /target
+/build
+
+# We do in-tree builds of the paclet, and those built libraries copied
+# in-tree should never be committed.
+/paclets/Markdown/LibraryResources/

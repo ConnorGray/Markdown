@@ -3,5 +3,6 @@ resolver = "2"
 
 members = [
     "./crates/markdown-ast",
-    "./crates/md2nb"
+    "./crates/md2nb",
+    "./crates/wolfram-markdown-link"
 ]
