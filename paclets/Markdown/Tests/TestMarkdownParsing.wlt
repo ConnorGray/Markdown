@@ -28,6 +28,15 @@ VerificationTest[
 	}]}
 ]
 
+(* FIXME: This is a bug, we lose the strong/bold wrapper. *)
+VerificationTest[
+	MarkdownParse["**`code`**"]
+	,
+	{MarkdownElement["Paragraph", {
+		MarkdownElement["Code", "code"]
+	}]}
+]
+
 (* FIXME:
     This is flaky due to use of HashSet internally causing random sorting
 	of the text styling attributes.

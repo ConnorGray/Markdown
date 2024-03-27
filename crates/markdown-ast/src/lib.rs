@@ -530,6 +530,27 @@ fn tests() {
         )])]
     );
 
+    // FIXME: This is a bug, we lose the strong/bold wrapper.
+    assert_eq!(
+        parse_markdown_to_ast("**`strong code`**"),
+        vec![Block::paragraph(vec![Inline::Code("strong code".into())])]
+    );
+
+    // FIXME: This is a bug, we lose the strikethrough wrapper
+    assert_eq!(
+        parse_markdown_to_ast("~~`foo`~~"),
+        vec![Block::paragraph(vec![Inline::Code("foo".into())])]
+    );
+
+    // FIXME: This is a bug, we lose the strong/bold wrapper.
+    assert_eq!(
+        parse_markdown_to_ast("**[example](example.com)**"),
+        vec![Block::paragraph(vec![Inline::Link {
+            label: Inlines(vec![Inline::Text("example".into(), HashSet::new())]),
+            destination: "example.com".into()
+        }])]
+    );
+
     //--------------
     // Lists
     //--------------
