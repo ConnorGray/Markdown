@@ -72,9 +72,6 @@ pub enum Inline {
     HardBreak,
 }
 
-#[deprecated(note = "Use Inline instead")]
-pub type TextSpan = Inline;
-
 //======================================
 // AST Builder
 //======================================
