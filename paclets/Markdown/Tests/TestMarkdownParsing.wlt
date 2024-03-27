@@ -80,6 +80,31 @@ VerificationTest[
 ]
 
 VerificationTest[
+	MarkdownParse["
+# This is an H1
+
+## This is an H2
+
+###### This is an H6
+
+######## This is too many levels!
+"]
+	,
+	{
+		MarkdownElement["Heading", 1, {MarkdownElement["Text", "This is an H1"]}],
+		MarkdownElement["Heading", 2, {MarkdownElement["Text", "This is an H2"]}],
+		MarkdownElement["Heading", 6, {MarkdownElement["Text", "This is an H6"]}],
+		MarkdownElement["Paragraph", {
+			MarkdownElement["Text", "######## This is too many levels!"]
+		}]
+	}
+]
+
+(*====================================*)
+(* Composite tests                    *)
+(*====================================*)
+
+VerificationTest[
 	MarkdownParse@"
 This is a paragraph
 with a soft line break.

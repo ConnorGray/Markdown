@@ -3,7 +3,7 @@ use wolfram_library_link::{
     expr::{Expr, Symbol},
 };
 
-use markdown_ast::{Block, Inline, Inlines, ListItem};
+use markdown_ast::{Block, HeadingLevel, Inline, Inlines, ListItem};
 
 #[allow(non_upper_case_globals)]
 const MarkdownElement: &str = "ConnorGray`Markdown`MarkdownElement";
@@ -48,7 +48,26 @@ fn block_to_expr(block: &Block) -> Expr {
                 vec![Expr::string("List"), Expr::list(exprs)],
             )
         },
-        Block::Heading(_, _) => todo!(),
+        Block::Heading(level, inlines) => {
+            let level = match level {
+                HeadingLevel::H1 => 1,
+                HeadingLevel::H2 => 2,
+                HeadingLevel::H3 => 3,
+                HeadingLevel::H4 => 4,
+                HeadingLevel::H5 => 5,
+                HeadingLevel::H6 => 6,
+            };
+
+            // MarkdownElement["Heading", level, {...}]
+            Expr::normal(
+                Symbol::new(MarkdownElement),
+                vec![
+                    Expr::string("Heading"),
+                    Expr::from(level),
+                    inlines_to_expr(inlines),
+                ],
+            )
+        },
         Block::CodeBlock {
             info_string: _,
             code: _,
