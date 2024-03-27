@@ -47,6 +47,18 @@ VerificationTest[
 ]
 
 VerificationTest[
+	MarkdownParse["`foo` is a **function**"]
+	,
+	{MarkdownElement["Paragraph", {
+		MarkdownElement["Code", "foo"],
+		MarkdownElement["Text", " is a "],
+		MarkdownElement["Strong", {
+			MarkdownElement["Text", "function"]
+		}]
+	}]}
+]
+
+VerificationTest[
 	MarkdownParse["_**hello**_"]
 	,
 	{MarkdownElement["Paragraph", {
