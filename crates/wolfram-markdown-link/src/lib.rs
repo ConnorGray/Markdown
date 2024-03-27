@@ -85,7 +85,10 @@ fn block_to_expr(block: &Block) -> Expr {
             headers: _,
             rows: _,
         } => todo!(),
-        Block::Rule => todo!(),
+        Block::Rule => Expr::normal(
+            Symbol::new(MarkdownElement),
+            vec![Expr::string("ThematicBreak")],
+        ),
     }
 }
 

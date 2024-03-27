@@ -100,6 +100,24 @@ VerificationTest[
 	}
 ]
 
+VerificationTest[
+	MarkdownParse["
+The content before.
+*****
+The content after.
+"]
+	,
+	{
+		MarkdownElement["Paragraph", {
+			MarkdownElement["Text", "The content before."]
+		}],
+		MarkdownElement["ThematicBreak"],
+		MarkdownElement["Paragraph", {
+			MarkdownElement["Text", "The content after."]
+		}]
+	}
+]
+
 (*====================================*)
 (* Composite tests                    *)
 (*====================================*)
@@ -160,6 +178,57 @@ VerificationTest[MarkdownParse@"
 			MarkdownElement["ListItem", {
 				MarkdownElement["Paragraph", {
 					MarkdownElement["Text", "This is the second list element"]
+				}]
+			}]
+		}]
+	}
+]
+
+(* Test thematic breaks in block quotes *)
+VerificationTest[
+	MarkdownParse["
+> This is earlier in the story.
+> *****
+> This is later in the story.
+"]
+	,
+	{
+		MarkdownElement["BlockQuote", {
+			MarkdownElement["Paragraph", {
+				MarkdownElement["Text", "This is earlier in the story."]
+			}],
+			MarkdownElement["ThematicBreak"],
+			MarkdownElement["Paragraph", {
+				MarkdownElement["Text", "This is later in the story."]
+			}]
+		}]
+	}
+]
+
+(* Test thematic breaks in list items *)
+VerificationTest[
+	MarkdownParse["
+1. This is a complicated list item.
+   *****
+   It has multiple thematic pieces!
+
+2. And that's not even the only item in this list!
+"]
+	,
+	{
+		MarkdownElement["List", {
+			MarkdownElement["ListItem", {
+				MarkdownElement["Paragraph", {
+					MarkdownElement["Text", "This is a complicated list item."]
+				}],
+				MarkdownElement["ThematicBreak"],
+				MarkdownElement["Paragraph", {
+					MarkdownElement["Text", "It has multiple thematic pieces!"]
+				}]
+			}],
+			MarkdownElement["ListItem", {
+				MarkdownElement["Paragraph", {
+					MarkdownElement["Text", "And that's not even the only item in this list!"]
 				}]
 			}]
 		}]
