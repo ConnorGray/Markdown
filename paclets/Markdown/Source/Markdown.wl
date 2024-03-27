@@ -4,12 +4,20 @@ MarkdownElement
 
 MarkdownParse
 
+ConvertToMarkdown
+
+MarkdownError
+
 Begin["`Private`"]
 
 (* Install any missing dependencies. *)
 PacletInstall /@ PacletObject["ConnorGray/NotebookWebsiteTools"]["Dependencies"]
 
 Needs["Wolfram`ErrorTools`"]
+
+Needs["ConnorGray`Markdown`ConvertToMarkdown`"]
+
+CreateErrorType[MarkdownError, {}]
 
 (*========================================================*)
 (* Eagerly load the underlying implementation library     *)
