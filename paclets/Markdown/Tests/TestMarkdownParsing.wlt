@@ -1,6 +1,12 @@
 Needs["ConnorGray`Markdown`"]
 
 VerificationTest[
+	MarkdownParse[""]
+	,
+	{}
+]
+
+VerificationTest[
 	MarkdownParse["hello"]
 	,
 	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello"]}]}
