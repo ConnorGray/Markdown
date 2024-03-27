@@ -3,7 +3,7 @@ use wolfram_library_link::{
     expr::{Expr, Symbol},
 };
 
-use markdown_ast::{Block, Inline, Inlines, ListItem, TextStyle};
+use markdown_ast::{Block, Inline, Inlines, ListItem};
 
 #[allow(non_upper_case_globals)]
 const MarkdownElement: &str = "ConnorGray`Markdown`MarkdownElement";
@@ -71,21 +71,23 @@ fn inlines_to_expr(Inlines(inlines): &Inlines) -> Expr {
 
 fn inline_to_expr(span: &Inline) -> Expr {
     let inline_args = match span {
-        Inline::Text(string, styles) => {
-            let mut styles_exprs = styles.iter().map(text_style_to_expr);
-            let style_expr = match styles.len() {
-                0 => Expr::list(vec![]),
-                1 => styles_exprs.next().unwrap(),
-                _ => Expr::list(styles_exprs.collect()),
-            };
-            // let args: Vec<Expr> = std::iter::once(Expr::string(string))
-            //     .chain(styles.iter().map(text_style_to_expr))
-            //     .collect();
-
-            // MarkdownElement["Text", string, styles]
-            vec![Expr::string("Text"), Expr::string(string), style_expr]
+        Inline::Text(string) => {
+            // MarkdownElement["Text", "string"]
+            vec![Expr::string("Text"), Expr::string(string)]
         },
-        // MarkdownElement["Code", code]
+        Inline::Emphasis(inlines) => {
+            // MarkdownElement["Emphasis", {...}]
+            vec![Expr::string("Emphasis"), inlines_to_expr(inlines)]
+        },
+        Inline::Strong(inlines) => {
+            // MarkdownElement["Strong", {...}]
+            vec![Expr::string("Strong"), inlines_to_expr(inlines)]
+        },
+        Inline::Strikethrough(inlines) => {
+            // MarkdownElement["Strikethrough", {...}]
+            vec![Expr::string("Strikethrough"), inlines_to_expr(inlines)]
+        },
+        // MarkdownElement["Code", "code"]
         Inline::Code(code) => vec![Expr::string("Code"), Expr::string(code)],
         // MarkdownElement["Hyperlink", label, destination]
         Inline::Link { label, destination } => vec![
@@ -98,17 +100,6 @@ fn inline_to_expr(span: &Inline) -> Expr {
     };
 
     Expr::normal(Symbol::new(MarkdownElement), inline_args)
-}
-
-// FIXME: This is the wrong level of abstraction, in particular the
-//        strikethrough. Represent this symbolically, and convert to native
-//        WL styles once we're in Wolfram, using some helper function.
-fn text_style_to_expr(style: &TextStyle) -> Expr {
-    match style {
-        TextStyle::Emphasis => Expr::from(Symbol::new("System`Italic")),
-        TextStyle::Strong => Expr::from(Symbol::new("System`Bold")),
-        TextStyle::Strikethrough => Expr::string("StrikeThrough"),
-    }
 }
 
 fn list_item_to_expr(ListItem(blocks): &ListItem) -> Expr {

@@ -1,4 +1,4 @@
-use markdown_ast::{Block, HeadingLevel, Inline, Inlines, ListItem, TextStyle};
+use markdown_ast::{Block, HeadingLevel, Inline, Inlines, ListItem};
 
 use wolfram_expr::{Expr, Symbol};
 
@@ -344,40 +344,34 @@ fn text_to_boxes(text: Inlines) -> Expr {
     let mut row = Vec::new();
 
     for span in text {
-        match span {
-            Inline::Text(text, styles) => {
-                let mut style_rules: Vec<Expr> = Vec::new();
-
-                for style in styles {
-                    let (lhs, rhs) = match style {
-                        TextStyle::Emphasis => {
-                            (Symbol::new("System`FontSlant"), "Italic")
-                        },
-                        TextStyle::Strong => (Symbol::new("System`FontWeight"), "Bold"),
-                        TextStyle::Strikethrough => todo!("strikethrough text"),
-                    };
-
-                    style_rules.push(Expr::normal(
-                        Symbol::new("System`Rule"),
-                        vec![Expr::from(lhs), Expr::string(rhs)],
-                    ));
-                }
-
-                let expr = if style_rules.is_empty() {
-                    Expr::string(text)
-                } else {
-                    style_rules.insert(0, Expr::string(text));
-
-                    Expr::normal(Symbol::new("System`StyleBox"), style_rules)
-                };
-
-                row.push(expr);
-            },
-            Inline::Code(code) => row.push(Expr::normal(
+        let expr = match span {
+            Inline::Text(text) => Expr::string(text),
+            Inline::Emphasis(inlines) => Expr::normal(
+                Symbol::new("System`StyleBox"),
+                vec![
+                    text_to_boxes(inlines),
+                    Expr::rule(
+                        Symbol::new("System`FontSlant"),
+                        Expr::symbol(Symbol::new("System`Italic")),
+                    ),
+                ],
+            ),
+            Inline::Strong(inlines) => Expr::normal(
+                Symbol::new("System`StyleBox"),
+                vec![
+                    text_to_boxes(inlines),
+                    Expr::rule(
+                        Symbol::new("System`FontWeight"),
+                        Expr::symbol(Symbol::new("System`Bold")),
+                    ),
+                ],
+            ),
+            Inline::Strikethrough(_) => todo!("strikethrough text"),
+            Inline::Code(code) => Expr::normal(
                 Symbol::new("System`StyleBox"),
                 vec![Expr::string(code), Expr::string("Code")],
-            )),
-            Inline::Link { label, destination } => row.push(Expr::normal(
+            ),
+            Inline::Link { label, destination } => Expr::normal(
                 Symbol::new("System`ButtonBox"),
                 vec![
                     text_to_boxes(label),
@@ -412,10 +406,12 @@ fn text_to_boxes(text: Inlines) -> Expr {
                         ],
                     ),
                 ],
-            )),
-            Inline::SoftBreak => row.push(Expr::string(" ")),
-            Inline::HardBreak => row.push(Expr::string("\n")),
-        }
+            ),
+            Inline::SoftBreak => Expr::string(" "),
+            Inline::HardBreak => Expr::string("\n"),
+        };
+
+        row.push(expr);
     }
 
     Expr::normal(

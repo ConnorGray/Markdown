@@ -3,49 +3,60 @@ Needs["ConnorGray`Markdown`"]
 VerificationTest[
 	MarkdownParse["hello"]
 	,
-	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello", {}]}]}
+	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello"]}]}
 ]
 
 VerificationTest[
 	MarkdownParse["*hello*"]
 	,
-	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello", Italic]}]}
+	{MarkdownElement["Paragraph", {
+		MarkdownElement["Emphasis", {
+			MarkdownElement["Text", "hello"]
+		}]
+	}]}
 ]
 
 VerificationTest[
 	MarkdownParse["**hello**"]
 	,
-	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello", Bold]}]}
+	{MarkdownElement["Paragraph", {
+		MarkdownElement["Strong", {
+			MarkdownElement["Text", "hello"]
+		}]
+	}]}
 ]
 
 VerificationTest[
 	MarkdownParse["*hello* **world**"]
 	,
 	{MarkdownElement["Paragraph", {
-		MarkdownElement["Text", "hello", Italic],
-		MarkdownElement["Text", " ", {}],
-		MarkdownElement["Text", "world", Bold]
+		MarkdownElement["Emphasis", {MarkdownElement["Text", "hello"]}],
+		MarkdownElement["Text", " "],
+		MarkdownElement["Strong", {MarkdownElement["Text", "world"]}]
 	}]}
 ]
 
-(* FIXME: This is a bug, we lose the strong/bold wrapper. *)
 VerificationTest[
 	MarkdownParse["**`code`**"]
 	,
 	{MarkdownElement["Paragraph", {
-		MarkdownElement["Code", "code"]
+		MarkdownElement["Strong", {
+			MarkdownElement["Code", "code"]
+		}]
 	}]}
 ]
 
-(* FIXME:
-    This is flaky due to use of HashSet internally causing random sorting
-	of the text styling attributes.
-*)
-(* VerificationTest[
+VerificationTest[
 	MarkdownParse["_**hello**_"]
 	,
-	{{Markdown`Inline["Text", "hello", {Italic, Bold}]}}
-] *)
+	{MarkdownElement["Paragraph", {
+		MarkdownElement["Emphasis", {
+			MarkdownElement["Strong", {
+				MarkdownElement["Text", "hello"]
+			}]
+		}]
+	}]}
+]
 
 VerificationTest[
 	MarkdownParse["* one\n* two\n* three"]
@@ -54,9 +65,9 @@ VerificationTest[
 		MarkdownElement[
 			"List",
 			{
-				{MarkdownElement["Paragraph", {MarkdownElement["Text", "one", {}]}]},
-				{MarkdownElement["Paragraph", {MarkdownElement["Text", "two", {}]}]},
-				{MarkdownElement["Paragraph", {MarkdownElement["Text", "three", {}]}]}
+				{MarkdownElement["Paragraph", {MarkdownElement["Text", "one"]}]},
+				{MarkdownElement["Paragraph", {MarkdownElement["Text", "two"]}]},
+				{MarkdownElement["Paragraph", {MarkdownElement["Text", "three"]}]}
 			}
 		]
 	}

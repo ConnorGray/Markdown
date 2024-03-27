@@ -8,7 +8,7 @@
 mod unflatten;
 
 
-use std::{collections::HashSet, mem};
+use std::mem;
 
 use pulldown_cmark::{self as md, Event, LinkType, Tag};
 
@@ -62,7 +62,10 @@ pub struct ListItem(pub Vec<Block>);
 /// *CommonMark Spec:* [inlines](https://spec.commonmark.org/0.30/#inlines)
 #[derive(Debug, Clone, PartialEq)]
 pub enum Inline {
-    Text(String, HashSet<TextStyle>),
+    Text(String),
+    Emphasis(Inlines),
+    Strong(Inlines),
+    Strikethrough(Inlines),
     Code(String),
     Link { label: Inlines, destination: String },
     SoftBreak,
@@ -71,13 +74,6 @@ pub enum Inline {
 
 #[deprecated(note = "Use Inline instead")]
 pub type TextSpan = Inline;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum TextStyle {
-    Emphasis,
-    Strong,
-    Strikethrough,
-}
 
 //======================================
 // AST Builder
@@ -170,9 +166,7 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                 Event::Start(_) | Event::End(_) => {
                     panic!("illegal Event::{{Start, End}} in UnflattenedEvent::Event")
                 },
-                Event::Text(text) => {
-                    text_spans.push(Inline::Text(text.to_string(), HashSet::new()))
-                },
+                Event::Text(text) => text_spans.push(Inline::Text(text.to_string())),
                 Event::Code(code) => text_spans.push(Inline::Code(code.to_string())),
                 Event::SoftBreak => text_spans.push(Inline::SoftBreak),
                 Event::HardBreak => text_spans.push(Inline::HardBreak),
@@ -188,26 +182,17 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                     // Inline content
                     //
                     Tag::Emphasis => {
-                        text_spans.extend(unwrap_text(
-                            events,
-                            HashSet::from_iter([TextStyle::Emphasis]),
-                        ));
+                        text_spans.push(Inline::Emphasis(unwrap_text(events)));
                     },
                     Tag::Strong => {
-                        text_spans.extend(unwrap_text(
-                            events,
-                            HashSet::from_iter([TextStyle::Strong]),
-                        ));
+                        text_spans.push(Inline::Strong(unwrap_text(events)));
                     },
                     Tag::Strikethrough => {
-                        text_spans.extend(unwrap_text(
-                            events,
-                            HashSet::from_iter([TextStyle::Strikethrough]),
-                        ));
+                        text_spans.push(Inline::Strikethrough(unwrap_text(events)));
                     },
 
                     Tag::Link(link_type, destination, label) => {
-                        let text = unwrap_text(events, HashSet::new());
+                        let text = unwrap_text(events);
                         text_spans.push(Inline::from_link(
                             link_type,
                             text,
@@ -222,14 +207,11 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
 
                     // TODO: Use the two Heading fields that are ignored here?
                     Tag::Heading(level, _, _) => {
-                        complete.push(Block::Heading(
-                            level,
-                            unwrap_text(events, Default::default()),
-                        ));
+                        complete.push(Block::Heading(level, unwrap_text(events)));
                     },
-                    Tag::Paragraph => {
-                        text_spans.extend(unwrap_text(events, Default::default()))
-                    },
+                    // TODO(test):
+                    //     Is this disappearance of the Paragraph tag correct?
+                    Tag::Paragraph => text_spans.extend(unwrap_text(events)),
                     // TODO: Include the list start number in the metadata
                     Tag::List(_start) => {
                         let mut items: Vec<ListItem> = Vec::new();
@@ -258,7 +240,7 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                             md::CodeBlockKind::Fenced(label) => Some(label.to_string()),
                         };
 
-                        let text_spans = unwrap_text(events, Default::default());
+                        let text_spans = unwrap_text(events);
                         let code_text = text_to_string(&text_spans);
 
                         complete.push(Block::CodeBlock {
@@ -284,10 +266,8 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         let mut headers = Vec::new();
 
                         for table_cell in header_events {
-                            let table_cell_text = unwrap_text(
-                                unwrap_table_cell(table_cell),
-                                HashSet::new(),
-                            );
+                            let table_cell_text =
+                                unwrap_text(unwrap_table_cell(table_cell));
 
                             headers.push(table_cell_text);
                         }
@@ -306,10 +286,8 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                             let mut row = Vec::new();
 
                             for table_cell in row_events {
-                                let table_cell_text = unwrap_text(
-                                    unwrap_table_cell(table_cell),
-                                    HashSet::new(),
-                                );
+                                let table_cell_text =
+                                    unwrap_text(unwrap_table_cell(table_cell));
 
                                 row.push(table_cell_text);
                             }
@@ -332,16 +310,14 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
     complete
 }
 
-fn unwrap_text(events: Vec<UnflattenedEvent>, mut styles: HashSet<TextStyle>) -> Inlines {
+fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
     let mut text_spans: Vec<Inline> = vec![];
 
     for event in events {
         match event {
             UnflattenedEvent::Event(event) => match event {
                 Event::Start(_) | Event::End(_) => unreachable!(),
-                Event::Text(text) => {
-                    text_spans.push(Inline::Text(text.to_string(), styles.clone()))
-                },
+                Event::Text(text) => text_spans.push(Inline::Text(text.to_string())),
                 Event::Code(code) => text_spans.push(Inline::Code(code.to_string())),
                 Event::SoftBreak => text_spans.push(Inline::SoftBreak),
                 Event::HardBreak => text_spans.push(Inline::HardBreak),
@@ -352,19 +328,13 @@ fn unwrap_text(events: Vec<UnflattenedEvent>, mut styles: HashSet<TextStyle>) ->
             },
             UnflattenedEvent::Nested { tag, events } => match tag {
                 Tag::Emphasis => {
-                    styles.insert(TextStyle::Emphasis);
-                    text_spans.extend(unwrap_text(events, styles.clone()));
-                    styles.remove(&TextStyle::Emphasis);
+                    text_spans.push(Inline::Emphasis(unwrap_text(events)));
                 },
                 Tag::Strong => {
-                    styles.insert(TextStyle::Strong);
-                    text_spans.extend(unwrap_text(events, styles.clone()));
-                    styles.remove(&TextStyle::Strong);
+                    text_spans.push(Inline::Strong(unwrap_text(events)));
                 },
                 Tag::Strikethrough => {
-                    styles.insert(TextStyle::Strikethrough);
-                    text_spans.extend(unwrap_text(events, styles.clone()));
-                    styles.remove(&TextStyle::Strikethrough);
+                    text_spans.push(Inline::Strikethrough(unwrap_text(events)));
                 },
                 Tag::Paragraph => {
                     // If this is a separate paragraph, insert two hardbreaks
@@ -376,10 +346,10 @@ fn unwrap_text(events: Vec<UnflattenedEvent>, mut styles: HashSet<TextStyle>) ->
                         text_spans.push(Inline::HardBreak);
                         text_spans.push(Inline::HardBreak);
                     }
-                    text_spans.extend(unwrap_text(events, styles.clone()))
+                    text_spans.extend(unwrap_text(events))
                 },
                 Tag::Link(link_type, destination, label) => {
-                    let text = unwrap_text(events, HashSet::new());
+                    let text = unwrap_text(events);
                     text_spans.push(Inline::from_link(
                         link_type,
                         text,
@@ -410,11 +380,7 @@ fn text_to_string(Inlines(text_spans): &Inlines) -> String {
 
     for span in text_spans {
         match span {
-            Inline::Text(text, styles) => {
-                if !styles.is_empty() {
-                    todo!("support text style(s) `{styles:?}` in string {text:?}");
-                }
-
+            Inline::Text(text) => {
                 string.push_str(&text);
             },
             Inline::SoftBreak => {
@@ -435,6 +401,18 @@ fn text_to_string(Inlines(text_spans): &Inlines) -> String {
 //======================================
 
 impl Inline {
+    pub fn emphasis(inline: Inline) -> Self {
+        Inline::Emphasis(Inlines(vec![inline]))
+    }
+
+    pub fn strong(inline: Inline) -> Self {
+        Inline::Strong(Inlines(vec![inline]))
+    }
+
+    pub fn strikethrough(inline: Inline) -> Self {
+        Inline::Strikethrough(Inlines(vec![inline]))
+    }
+
     fn from_link(
         link_type: LinkType,
         text: Inlines,
@@ -496,10 +474,7 @@ fn tests() {
 
     assert_eq!(
         parse_markdown_to_ast("hello"),
-        vec![Block::paragraph(vec![Inline::Text(
-            "hello".into(),
-            HashSet::new()
-        )])]
+        vec![Block::paragraph(vec![Inline::Text("hello".into())])]
     );
 
     //--------------
@@ -508,47 +483,53 @@ fn tests() {
 
     assert_eq!(
         parse_markdown_to_ast("*hello*"),
-        vec![Block::paragraph(vec![Inline::Text(
-            "hello".into(),
-            HashSet::from_iter(vec![TextStyle::Emphasis])
-        )])]
+        vec![Block::paragraph(vec![Inline::emphasis(Inline::Text(
+            "hello".into()
+        ))])]
     );
 
     assert_eq!(
         parse_markdown_to_ast("**hello**"),
-        vec![Block::paragraph(vec![Inline::Text(
-            "hello".into(),
-            HashSet::from_iter(vec![TextStyle::Strong])
-        )])]
+        vec![Block::paragraph(vec![Inline::strong(Inline::Text(
+            "hello".into()
+        ))])]
     );
 
     assert_eq!(
         parse_markdown_to_ast("~~hello~~"),
-        vec![Block::paragraph(vec![Inline::Text(
-            "hello".into(),
-            HashSet::from_iter(vec![TextStyle::Strikethrough])
-        )])]
+        vec![Block::paragraph(vec![Inline::strikethrough(Inline::Text(
+            "hello".into()
+        ))])]
     );
 
-    // FIXME: This is a bug, we lose the strong/bold wrapper.
     assert_eq!(
         parse_markdown_to_ast("**`strong code`**"),
-        vec![Block::paragraph(vec![Inline::Code("strong code".into())])]
+        vec![Block::paragraph(vec![Inline::strong(Inline::Code(
+            "strong code".into()
+        ))])]
     );
 
-    // FIXME: This is a bug, we lose the strikethrough wrapper
     assert_eq!(
         parse_markdown_to_ast("~~`foo`~~"),
-        vec![Block::paragraph(vec![Inline::Code("foo".into())])]
+        vec![Block::paragraph(vec![Inline::strikethrough(Inline::Code(
+            "foo".into()
+        ))])]
     );
 
-    // FIXME: This is a bug, we lose the strong/bold wrapper.
     assert_eq!(
         parse_markdown_to_ast("**[example](example.com)**"),
-        vec![Block::paragraph(vec![Inline::Link {
-            label: Inlines(vec![Inline::Text("example".into(), HashSet::new())]),
+        vec![Block::paragraph(vec![Inline::strong(Inline::Link {
+            label: Inlines(vec![Inline::Text("example".into())]),
             destination: "example.com".into()
-        }])]
+        })])]
+    );
+
+    // Test composition of emphasis, strong, strikethrough and code
+    assert_eq!(
+        parse_markdown_to_ast("_~~**`foo`**~~_"),
+        vec![Block::paragraph(vec![Inline::emphasis(
+            Inline::strikethrough(Inline::strong(Inline::Code("foo".into())))
+        )])]
     );
 
     //--------------
@@ -558,7 +539,7 @@ fn tests() {
     assert_eq!(
         parse_markdown_to_ast("* hello"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
-            Inline::Text("hello".into(), HashSet::new())
+            Inline::Text("hello".into())
         ])])])]
     );
 
@@ -567,27 +548,21 @@ fn tests() {
     assert_eq!(
         parse_markdown_to_ast("* *hello*"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
-            Inline::Text(
-                "hello".into(),
-                HashSet::from_iter(vec![TextStyle::Emphasis])
-            )
+            Inline::emphasis(Inline::Text("hello".into()))
         ])])])]
     );
 
     assert_eq!(
         parse_markdown_to_ast("* **hello**"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
-            Inline::Text("hello".into(), HashSet::from_iter(vec![TextStyle::Strong]))
+            Inline::strong(Inline::Text("hello".into()))
         ])])])]
     );
 
     assert_eq!(
         parse_markdown_to_ast("* ~~hello~~"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
-            Inline::Text(
-                "hello".into(),
-                HashSet::from_iter(vec![TextStyle::Strikethrough])
-            )
+            Inline::strikethrough(Inline::Text("hello".into()),)
         ])])])]
     );
 }
@@ -606,8 +581,8 @@ fn test_structure() {
             "
         )),
         vec![Block::List(vec![ListItem(vec![
-            Block::paragraph(vec![Inline::Text("hello".into(), Default::default())]),
-            Block::paragraph(vec![Inline::Text("world".into(), Default::default())])
+            Block::paragraph(vec![Inline::Text("hello".into())]),
+            Block::paragraph(vec![Inline::Text("world".into())])
         ])])]
     );
 
@@ -628,21 +603,21 @@ fn test_structure() {
         vec![
             Block::Heading(
                 HeadingLevel::H1,
-                Inlines(vec![Inline::Text("Example".into(), Default::default())])
+                Inlines(vec![Inline::Text("Example".into())])
             ),
             Block::List(vec![
                 ListItem(vec![
-                    Block::paragraph(vec![Inline::Text("A".into(), Default::default())]),
+                    Block::paragraph(vec![Inline::Text("A".into())]),
                     Block::List(vec![
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.A".into(), Default::default())]),
-                            Block::paragraph(vec![Inline::Text("hello world".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.A".into())]),
+                            Block::paragraph(vec![Inline::Text("hello world".into())]),
                             Block::List(vec![
                                 ListItem(vec![
                                     Block::paragraph(vec![
-                                        Inline::Text(
-                                            "A.A.A".into(),
-                                            HashSet::from_iter([TextStyle::Emphasis])
+                                        Inline::emphasis(
+                                            Inline::Text(
+                                            "A.A.A".into()),
                                         )
                                     ])
                                 ])
@@ -668,19 +643,19 @@ fn test_structure() {
         vec![
             Block::List(vec![
                 ListItem(vec![
-                    Block::paragraph(vec![Inline::Text("A".into(), Default::default())]),
+                    Block::paragraph(vec![Inline::Text("A".into())]),
                     Block::List(vec![
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.A".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.A".into())]),
                             Block::List(vec![ListItem(vec![
-                                Block::paragraph(vec![Inline::Text("A.A.A".into(), Default::default())]),
+                                Block::paragraph(vec![Inline::Text("A.A.A".into())]),
                             ])])
                         ]),
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.B".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.B".into())]),
                         ]),
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.C".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.C".into())]),
                         ])
                     ])
                 ])
@@ -703,22 +678,22 @@ fn test_structure() {
         vec![
             Block::Heading(
                 HeadingLevel::H1,
-                Inlines(vec![Inline::Text("Example".into(), Default::default())])
+                Inlines(vec![Inline::Text("Example".into())])
             ),
             Block::List(vec![
                 ListItem(vec![
-                    Block::paragraph(vec![Inline::Text("A".into(), Default::default())]),
+                    Block::paragraph(vec![Inline::Text("A".into())]),
                     Block::List(vec![
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.A".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.A".into())]),
                         ]),
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.B".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.B".into())]),
                         ]),
                     ]),
                     Block::List(vec![
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.C".into(), Default::default())])
+                            Block::paragraph(vec![Inline::Text("A.C".into())])
                         ])
                     ]),
                 ]),
@@ -742,17 +717,17 @@ fn test_structure() {
         vec![
             Block::List(vec![
                 ListItem(vec![
-                    Block::paragraph(vec![Inline::Text("A".into(), Default::default())]),
+                    Block::paragraph(vec![Inline::Text("A".into())]),
                     Block::List(vec![
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.A".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.A".into())]),
                         ]),
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.B".into(), Default::default())]),
-                            Block::paragraph(vec![Inline::Text("separate paragraph".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.B".into())]),
+                            Block::paragraph(vec![Inline::Text("separate paragraph".into())]),
                         ]),
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.C".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.C".into())]),
                         ])
                     ])
                 ])
@@ -781,36 +756,32 @@ fn test_structure() {
         vec![
             Block::Heading(
                 HeadingLevel::H1,
-                Inlines(vec![Inline::Text("Example".into(), Default::default())])
+                Inlines(vec![Inline::Text("Example".into())])
             ),
             Block::List(vec![
                 ListItem(vec![
-                    Block::paragraph(vec![Inline::Text("A".into(), Default::default())]),
+                    Block::paragraph(vec![Inline::Text("A".into())]),
                     Block::List(vec![
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.A".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.A".into())]),
                             Block::List(vec![
                                 ListItem(vec![
                                     Block::paragraph(vec![
-                                        Inline::Text(
-                                            "A.A.A".into(),
-                                            Default::default(),
-                                        ),
+                                        Inline::Text("A.A.A".into()),
                                         Inline::SoftBreak,
-                                        Inline::Text(
-                                            "soft break".into(),
-                                            HashSet::from_iter([TextStyle::Strong])
+                                        Inline::strong(
+                                            Inline::Text("soft break".into()),
                                         )
                                     ]),
                                 ])
                             ]),
                         ]),
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.B".into(), Default::default())]),
-                            Block::paragraph(vec![Inline::Text("separate paragraph".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.B".into())]),
+                            Block::paragraph(vec![Inline::Text("separate paragraph".into())]),
                         ]),
                         ListItem(vec![
-                            Block::paragraph(vec![Inline::Text("A.C".into(), Default::default())]),
+                            Block::paragraph(vec![Inline::Text("A.C".into())]),
                         ]),
                     ])
                 ])
