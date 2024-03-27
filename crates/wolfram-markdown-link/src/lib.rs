@@ -73,7 +73,7 @@ fn block_to_expr(block: &Block) -> Expr {
 fn inlines_to_expr(Inlines(inlines): &Inlines) -> Expr {
     let spans = inlines.iter().map(inline_to_expr).collect();
 
-    // {Markdown`Inline[__]...}
+    // {MarkdownElement[__]...}
     Expr::list(spans)
 }
 
