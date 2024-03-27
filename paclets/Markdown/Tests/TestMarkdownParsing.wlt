@@ -118,6 +118,32 @@ The content after.
 	}
 ]
 
+(* Test code blocks *)
+VerificationTest[
+	MarkdownParse["
+This is a code block:
+
+```wolfram
+f[g[h[]]]
+```
+
+This is an indented code block:
+
+    could_be_any_language()
+"]
+	,
+	{
+		MarkdownElement["Paragraph", {
+			MarkdownElement["Text", "This is a code block:"]
+		}],
+		MarkdownElement["CodeBlock", "wolfram", "f[g[h[]]]\n"],
+		MarkdownElement["Paragraph", {
+			MarkdownElement["Text", "This is an indented code block:"]
+		}],
+		MarkdownElement["CodeBlock", None, "could_be_any_language()\n"]
+	}
+]
+
 (*====================================*)
 (* Composite tests                    *)
 (*====================================*)

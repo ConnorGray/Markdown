@@ -68,10 +68,18 @@ fn block_to_expr(block: &Block) -> Expr {
                 ],
             )
         },
-        Block::CodeBlock {
-            info_string: _,
-            code: _,
-        } => todo!(),
+        // MarkdownElement["CodeBlock", "info", "code"]
+        Block::CodeBlock { info_string, code } => Expr::normal(
+            Symbol::new(MarkdownElement),
+            vec![
+                Expr::string("CodeBlock"),
+                match info_string {
+                    Some(info) => Expr::string(info),
+                    None => Expr::symbol(Symbol::new("System`None")),
+                },
+                Expr::string(code),
+            ],
+        ),
         // MarkdownElement["BlockQuote", {...}]
         Block::BlockQuote(blocks) => {
             let blocks = blocks.into_iter().map(block_to_expr).collect();
