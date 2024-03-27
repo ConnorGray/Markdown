@@ -53,7 +53,15 @@ fn block_to_expr(block: &Block) -> Expr {
             info_string: _,
             code: _,
         } => todo!(),
-        Block::BlockQuote(_) => todo!(),
+        // MarkdownElement["BlockQuote", {...}]
+        Block::BlockQuote(blocks) => {
+            let blocks = blocks.into_iter().map(block_to_expr).collect();
+
+            Expr::normal(
+                Symbol::new(MarkdownElement),
+                vec![Expr::string("BlockQuote"), Expr::list(blocks)],
+            )
+        },
         Block::Table {
             headers: _,
             rows: _,
@@ -105,5 +113,8 @@ fn inline_to_expr(span: &Inline) -> Expr {
 fn list_item_to_expr(ListItem(blocks): &ListItem) -> Expr {
     let blocks = blocks.iter().map(block_to_expr).collect();
 
-    Expr::list(blocks)
+    Expr::normal(
+        Symbol::new(MarkdownElement),
+        vec![Expr::string("ListItem"), Expr::list(blocks)],
+    )
 }
