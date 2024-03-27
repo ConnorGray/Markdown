@@ -5,6 +5,9 @@ use wolfram_library_link::{
 
 use markdown_ast::{Block, Inline, Inlines, ListItem, TextStyle};
 
+#[allow(non_upper_case_globals)]
+const MarkdownElement: &str = "ConnorGray`Markdown`MarkdownElement";
+
 #[export(wstp, hidden)]
 fn load_wolfram_markdown_link(args: Vec<Expr>) -> Expr {
     assert!(args.len() == 0);
@@ -32,14 +35,18 @@ fn parse_markdown(args: Vec<Expr>) -> Expr {
 
 fn block_to_expr(block: &Block) -> Expr {
     match block {
-        Block::Paragraph(inlines) => inlines_to_expr(inlines),
+        Block::Paragraph(inlines) => Expr::normal(
+            Symbol::new(MarkdownElement),
+            vec![Expr::string("Paragraph"), inlines_to_expr(inlines)],
+        ),
         // FIXME: Should say whether the list is ordered or not
         Block::List(items) => {
             let exprs = items.iter().map(list_item_to_expr).collect();
 
-            // FIXME: This name is just too ambiguous
-            // Markdown`List
-            Expr::normal(Symbol::new("Markdown`List"), exprs)
+            Expr::normal(
+                Symbol::new(MarkdownElement),
+                vec![Expr::string("List"), Expr::list(exprs)],
+            )
         },
         Block::Heading(_, _) => todo!(),
         Block::CodeBlock {
@@ -75,12 +82,12 @@ fn inline_to_expr(span: &Inline) -> Expr {
             //     .chain(styles.iter().map(text_style_to_expr))
             //     .collect();
 
-            // Inline["Text", string, styles]
+            // MarkdownElement["Text", string, styles]
             vec![Expr::string("Text"), Expr::string(string), style_expr]
         },
-        // Inline["Code", code]
+        // MarkdownElement["Code", code]
         Inline::Code(code) => vec![Expr::string("Code"), Expr::string(code)],
-        // Inline["Hyperlink", label, destination]
+        // MarkdownElement["Hyperlink", label, destination]
         Inline::Link { label, destination } => vec![
             Expr::string("Hyperlink"),
             inlines_to_expr(label),
@@ -90,7 +97,7 @@ fn inline_to_expr(span: &Inline) -> Expr {
         Inline::HardBreak => vec![Expr::string("HardBreak")],
     };
 
-    Expr::normal(Symbol::new("Markdown`Inline"), inline_args)
+    Expr::normal(Symbol::new(MarkdownElement), inline_args)
 }
 
 // FIXME: This is the wrong level of abstraction, in particular the

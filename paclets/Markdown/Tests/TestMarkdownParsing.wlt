@@ -3,29 +3,29 @@ Needs["ConnorGray`Markdown`"]
 VerificationTest[
 	MarkdownParse["hello"]
 	,
-	{{Markdown`Inline["Text", "hello", {}]}}
+	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello", {}]}]}
 ]
 
 VerificationTest[
 	MarkdownParse["*hello*"]
 	,
-	{{Markdown`Inline["Text", "hello", Italic]}}
+	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello", Italic]}]}
 ]
 
 VerificationTest[
 	MarkdownParse["**hello**"]
 	,
-	{{Markdown`Inline["Text", "hello", Bold]}}
+	{MarkdownElement["Paragraph", {MarkdownElement["Text", "hello", Bold]}]}
 ]
 
 VerificationTest[
 	MarkdownParse["*hello* **world**"]
 	,
-	{{
-		Markdown`Inline["Text", "hello", Italic],
-		Markdown`Inline["Text", " ", {}],
-		Markdown`Inline["Text", "world", Bold]
-	}}
+	{MarkdownElement["Paragraph", {
+		MarkdownElement["Text", "hello", Italic],
+		MarkdownElement["Text", " ", {}],
+		MarkdownElement["Text", "world", Bold]
+	}]}
 ]
 
 (* FIXME:
@@ -42,10 +42,13 @@ VerificationTest[
 	MarkdownParse["* one\n* two\n* three"]
 	,
 	{
-		Markdown`List[
-			{{Markdown`Inline["Text", "one", {}]}},
-			{{Markdown`Inline["Text", "two", {}]}},
-			{{Markdown`Inline["Text", "three", {}]}}
+		MarkdownElement[
+			"List",
+			{
+				{MarkdownElement["Paragraph", {MarkdownElement["Text", "one", {}]}]},
+				{MarkdownElement["Paragraph", {MarkdownElement["Text", "two", {}]}]},
+				{MarkdownElement["Paragraph", {MarkdownElement["Text", "three", {}]}]}
+			}
 		]
 	}
 ]

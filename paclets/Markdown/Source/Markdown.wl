@@ -1,5 +1,7 @@
 BeginPackage["ConnorGray`Markdown`"]
 
+MarkdownElement
+
 MarkdownParse
 
 Begin["`Private`"]
@@ -27,6 +29,8 @@ RaiseAssert[
 ];
 
 (*========================================================*)
+
+SetFallthroughError[MarkdownParse]
 
 MarkdownParse[s_?StringQ] := Module[{result},
 	result = $functions["parse_markdown"][s];
