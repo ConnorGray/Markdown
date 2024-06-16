@@ -122,18 +122,26 @@ fn is_inline(event: &UnflattenedEvent) -> bool {
             Event::HardBreak => true,
             // TODO: HTML could cause break to next block?
             Event::Html(_) => false,
+            Event::InlineHtml(_) => todo!(),
             Event::Rule => false,
             Event::TaskListMarker(_) => false,
             Event::FootnoteReference(_) => true,
+            Event::InlineMath(_) => todo!(),
+            Event::DisplayMath(_) => todo!(),
         },
         UnflattenedEvent::Nested { tag, events: _ } => match tag {
             Tag::Emphasis | Tag::Strong | Tag::Strikethrough => true,
-            Tag::Heading(_, _, _) => false,
+            Tag::Heading {
+                level: _,
+                id: _,
+                classes: _,
+                attrs: _,
+            } => false,
             Tag::Paragraph => false,
             Tag::List(_) => false,
             Tag::Item => false,
             Tag::CodeBlock(_) => false,
-            Tag::BlockQuote => false,
+            Tag::BlockQuote(_kind) => false,
             Tag::Table(_) => false,
             Tag::TableHead | Tag::TableRow => unreachable!(),
             _ => todo!("handle tag: {tag:?}"),
@@ -167,11 +175,14 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                 Event::Code(code) => text_spans.push(Inline::Code(code.to_string())),
                 Event::SoftBreak => text_spans.push(Inline::SoftBreak),
                 Event::HardBreak => text_spans.push(Inline::HardBreak),
-                Event::Html(_) => eprintln!("warning: skipping inline HTML"),
+                Event::Html(_) => todo!("error: unhandled inline HTML"),
+                Event::InlineHtml(_) => todo!(),
                 Event::Rule => complete.push(Block::Rule),
                 Event::TaskListMarker(_) | Event::FootnoteReference(_) => {
                     todo!("handle: {event:?}")
                 },
+                Event::InlineMath(_) => todo!(),
+                Event::DisplayMath(_) => todo!(),
             },
             UnflattenedEvent::Nested { tag, events } => {
                 match tag {
@@ -188,7 +199,13 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         text_spans.push(Inline::Strikethrough(unwrap_text(events)));
                     },
 
-                    Tag::Link(link_type, destination, label) => {
+                    Tag::Link {
+                        link_type,
+                        dest_url: destination,
+                        title: label,
+                        // TODO: Use this `id`?
+                        id: _,
+                    } => {
                         let text = unwrap_text(events);
                         text_spans.push(Inline::from_link(
                             link_type,
@@ -203,7 +220,12 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                     //
 
                     // TODO: Use the two Heading fields that are ignored here?
-                    Tag::Heading(level, _, _) => {
+                    Tag::Heading {
+                        level,
+                        id: _,
+                        classes: _,
+                        attrs: _,
+                    } => {
                         complete.push(Block::Heading(level, unwrap_text(events)));
                     },
                     // TODO(test):
@@ -245,7 +267,7 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                             code: code_text,
                         })
                     },
-                    Tag::BlockQuote => {
+                    Tag::BlockQuote(_kind) => {
                         let blocks = events_to_blocks(events);
                         complete.push(Block::BlockQuote(blocks))
                     },
@@ -318,10 +340,13 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
                 Event::Code(code) => text_spans.push(Inline::Code(code.to_string())),
                 Event::SoftBreak => text_spans.push(Inline::SoftBreak),
                 Event::HardBreak => text_spans.push(Inline::HardBreak),
-                Event::Html(_) => eprintln!("warning: skipping inline HTML"),
+                Event::Html(_) => todo!("error: skipping inline HTML"),
+                Event::InlineHtml(_) => todo!(),
                 Event::TaskListMarker(_) | Event::Rule | Event::FootnoteReference(_) => {
                     todo!("handle: {event:?}")
                 },
+                Event::InlineMath(_) => todo!(),
+                Event::DisplayMath(_) => todo!(),
             },
             UnflattenedEvent::Nested { tag, events } => match tag {
                 Tag::Emphasis => {
@@ -345,7 +370,13 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
                     }
                     text_spans.extend(unwrap_text(events))
                 },
-                Tag::Link(link_type, destination, label) => {
+                Tag::Link {
+                    link_type,
+                    dest_url: destination,
+                    title: label,
+                    // TODO: Use this `id`?
+                    id: _,
+                } => {
                     let text = unwrap_text(events);
                     text_spans.push(Inline::from_link(
                         link_type,
