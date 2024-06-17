@@ -22,7 +22,7 @@ fn parse_markdown(args: Vec<Expr>) -> Expr {
 
     let s: &str = args[0].try_as_str().expect("expected String argument");
 
-    let ast: Vec<Block> = markdown_ast::parse(s);
+    let ast: Vec<Block> = markdown_ast::markdown_to_ast(s);
 
     let ast: Vec<Expr> = ast.iter().map(block_to_expr).collect();
 

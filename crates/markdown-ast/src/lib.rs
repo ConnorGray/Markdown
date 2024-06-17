@@ -76,11 +76,7 @@ pub enum Inline {
 // AST Builder
 //======================================
 
-pub fn parse(input: &str) -> Vec<Block> {
-    parse_markdown_to_ast(input)
-}
-
-pub(crate) fn parse_markdown_to_ast(input: &str) -> Vec<Block> {
+pub fn markdown_to_ast(input: &str) -> Vec<Block> {
     /* For Markdown parsing debugging.
     {
         let mut options = md::Options::empty();
@@ -501,7 +497,7 @@ fn tests() {
     use pretty_assertions::assert_eq;
 
     assert_eq!(
-        parse_markdown_to_ast("hello"),
+        markdown_to_ast("hello"),
         vec![Block::paragraph(vec![Inline::Text("hello".into())])]
     );
 
@@ -510,42 +506,42 @@ fn tests() {
     //--------------
 
     assert_eq!(
-        parse_markdown_to_ast("*hello*"),
+        markdown_to_ast("*hello*"),
         vec![Block::paragraph(vec![Inline::emphasis(Inline::Text(
             "hello".into()
         ))])]
     );
 
     assert_eq!(
-        parse_markdown_to_ast("**hello**"),
+        markdown_to_ast("**hello**"),
         vec![Block::paragraph(vec![Inline::strong(Inline::Text(
             "hello".into()
         ))])]
     );
 
     assert_eq!(
-        parse_markdown_to_ast("~~hello~~"),
+        markdown_to_ast("~~hello~~"),
         vec![Block::paragraph(vec![Inline::strikethrough(Inline::Text(
             "hello".into()
         ))])]
     );
 
     assert_eq!(
-        parse_markdown_to_ast("**`strong code`**"),
+        markdown_to_ast("**`strong code`**"),
         vec![Block::paragraph(vec![Inline::strong(Inline::Code(
             "strong code".into()
         ))])]
     );
 
     assert_eq!(
-        parse_markdown_to_ast("~~`foo`~~"),
+        markdown_to_ast("~~`foo`~~"),
         vec![Block::paragraph(vec![Inline::strikethrough(Inline::Code(
             "foo".into()
         ))])]
     );
 
     assert_eq!(
-        parse_markdown_to_ast("**[example](example.com)**"),
+        markdown_to_ast("**[example](example.com)**"),
         vec![Block::paragraph(vec![Inline::strong(Inline::Link {
             label: Inlines(vec![Inline::Text("example".into())]),
             destination: "example.com".into()
@@ -554,7 +550,7 @@ fn tests() {
 
     // Test composition of emphasis, strong, strikethrough and code
     assert_eq!(
-        parse_markdown_to_ast("_~~**`foo`**~~_"),
+        markdown_to_ast("_~~**`foo`**~~_"),
         vec![Block::paragraph(vec![Inline::emphasis(
             Inline::strikethrough(Inline::strong(Inline::Code("foo".into())))
         )])]
@@ -565,7 +561,7 @@ fn tests() {
     //--------------
 
     assert_eq!(
-        parse_markdown_to_ast("* hello"),
+        markdown_to_ast("* hello"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
             Inline::Text("hello".into())
         ])])])]
@@ -574,21 +570,21 @@ fn tests() {
     // List items with styled text
 
     assert_eq!(
-        parse_markdown_to_ast("* *hello*"),
+        markdown_to_ast("* *hello*"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
             Inline::emphasis(Inline::Text("hello".into()))
         ])])])]
     );
 
     assert_eq!(
-        parse_markdown_to_ast("* **hello**"),
+        markdown_to_ast("* **hello**"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
             Inline::strong(Inline::Text("hello".into()))
         ])])])]
     );
 
     assert_eq!(
-        parse_markdown_to_ast("* ~~hello~~"),
+        markdown_to_ast("* ~~hello~~"),
         vec![Block::List(vec![ListItem(vec![Block::paragraph(vec![
             Inline::strikethrough(Inline::Text("hello".into()),)
         ])])])]
@@ -601,7 +597,7 @@ fn test_structure() {
     use pretty_assertions::assert_eq;
 
     assert_eq!(
-        parse_markdown_to_ast(indoc!(
+        markdown_to_ast(indoc!(
             "
             * hello
 
@@ -616,7 +612,7 @@ fn test_structure() {
 
     #[rustfmt::skip]
     assert_eq!(
-        parse_markdown_to_ast(indoc!(
+        markdown_to_ast(indoc!(
             "
             # Example
 
@@ -659,7 +655,7 @@ fn test_structure() {
 
     #[rustfmt::skip]
     assert_eq!(
-        parse_markdown_to_ast(indoc!(
+        markdown_to_ast(indoc!(
             "
             * A
               - A.A
@@ -693,7 +689,7 @@ fn test_structure() {
 
     #[rustfmt::skip]
     assert_eq!(
-        parse_markdown_to_ast(indoc!(
+        markdown_to_ast(indoc!(
             "
             # Example
 
@@ -731,7 +727,7 @@ fn test_structure() {
 
     #[rustfmt::skip]
     assert_eq!(
-        parse_markdown_to_ast(indoc!(
+        markdown_to_ast(indoc!(
             "
             * A
               - A.A
@@ -765,7 +761,7 @@ fn test_structure() {
 
     #[rustfmt::skip]
     assert_eq!(
-        parse_markdown_to_ast(indoc!(
+        markdown_to_ast(indoc!(
             "
             # Example
 

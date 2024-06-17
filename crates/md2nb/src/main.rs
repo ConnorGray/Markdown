@@ -43,7 +43,7 @@ fn main() -> Result<(), kernel::Error> {
     let contents: String =
         std::fs::read_to_string(&input).expect("failed to read input file");
 
-    let ast = markdown_ast::parse(&contents);
+    let ast = markdown_ast::markdown_to_ast(&contents);
 
     /* For debugging.
     println!("\n\n===== AST =====\n");
