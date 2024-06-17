@@ -1,4 +1,4 @@
-use pulldown_cmark::{self as md, Event, Tag};
+use pulldown_cmark::{Event, Tag};
 
 //======================================
 // Representation
@@ -19,20 +19,15 @@ pub(crate) enum UnflattenedEvent<'a> {
 // Implementation
 //======================================
 
-pub(crate) fn parse_markdown_to_unflattened_events(input: &str) -> Vec<UnflattenedEvent> {
-    // Set up options and parser. Strikethroughs are not part of the CommonMark standard
-    // and we therefore must enable it explicitly.
-    let mut options = md::Options::empty();
-    options.insert(md::Options::ENABLE_STRIKETHROUGH);
-    options.insert(md::Options::ENABLE_TABLES);
-    let parser = md::Parser::new_ext(input, options);
-
+pub(crate) fn parse_markdown_to_unflattened_events<'i>(
+    event_stream: impl Iterator<Item = Event<'i>>,
+) -> Vec<UnflattenedEvent<'i>> {
     let mut unflattener = Unflattener {
         root: vec![],
         nested: vec![],
     };
 
-    for event in parser {
+    for event in event_stream {
         unflattener.handle_event(event);
     }
 

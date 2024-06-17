@@ -69,11 +69,11 @@ fn block_to_expr(block: &Block) -> Expr {
             )
         },
         // MarkdownElement["CodeBlock", "info", "code"]
-        Block::CodeBlock { info_string, code } => Expr::normal(
+        Block::CodeBlock { kind, code } => Expr::normal(
             Symbol::new(MarkdownElement),
             vec![
                 Expr::string("CodeBlock"),
-                match info_string {
+                match kind.info_string() {
                     Some(info) => Expr::string(info),
                     None => Expr::symbol(Symbol::new("System`None")),
                 },
@@ -81,7 +81,8 @@ fn block_to_expr(block: &Block) -> Expr {
             ],
         ),
         // MarkdownElement["BlockQuote", {...}]
-        Block::BlockQuote(blocks) => {
+        // FIXME: Convert the `kind` as well.
+        Block::BlockQuote { kind: _, blocks } => {
             let blocks = blocks.into_iter().map(block_to_expr).collect();
 
             Expr::normal(
@@ -90,6 +91,7 @@ fn block_to_expr(block: &Block) -> Expr {
             )
         },
         Block::Table {
+            alignments: _,
             headers: _,
             rows: _,
         } => todo!(),
@@ -128,10 +130,19 @@ fn inline_to_expr(span: &Inline) -> Expr {
         // MarkdownElement["Code", "code"]
         Inline::Code(code) => vec![Expr::string("Code"), Expr::string(code)],
         // MarkdownElement["Hyperlink", label, destination]
-        Inline::Link { label, destination } => vec![
+        Inline::Link {
+            // FIXME: Pass through this link type
+            link_type: _,
+            // FIXME: Pass through this link title as well
+            title: _,
+            dest_url,
+            // FIXME: Pass through this link id
+            id: _,
+            content_text,
+        } => vec![
             Expr::string("Hyperlink"),
-            inlines_to_expr(label),
-            Expr::string(destination),
+            inlines_to_expr(content_text),
+            Expr::string(dest_url),
         ],
         Inline::SoftBreak => vec![Expr::string("SoftBreak")],
         Inline::HardBreak => vec![Expr::string("HardBreak")],

@@ -53,13 +53,13 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
             list_cells
         },
         Block::CodeBlock {
-            info_string: label,
+            kind,
             code: code_text,
         } => {
             let external_language: Option<&str> =
                 // The languages listed here should be all of those currently supported
                 // by ExternalEvaluate.
-                match label.map(|s| s.to_lowercase()).as_deref() {
+                match kind.info_string().map(|s| s.to_lowercase()).as_deref() {
                     Some("python") => Some("Python"),
                     Some("shell" | "bash" | "sh" | "zsh") => Some("Shell"),
                     Some("julia") => Some("Julia"),
@@ -98,7 +98,10 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
                 },
             }
         },
-        Block::BlockQuote(quote_blocks) => {
+        Block::BlockQuote {
+            kind: _,
+            blocks: quote_blocks,
+        } => {
             let quote_cells: Vec<Expr> = quote_blocks
                 .into_iter()
                 .flat_map(|block| block_to_cells(block, opts))
@@ -146,7 +149,12 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
             );
             vec![cell]
         },
-        Block::Table { headers, rows } => {
+        // FIXME: Process the `alignments`
+        Block::Table {
+            alignments: _,
+            headers,
+            rows,
+        } => {
             let mut grid_rows: Vec<Expr> = Vec::new();
 
             let header_row = headers
@@ -319,7 +327,7 @@ fn list_item_to_cells(state: &mut State, ListItem(blocks): ListItem) -> Vec<Expr
 
                 cells.extend(list_cells);
             },
-            Block::BlockQuote(_) => {
+            Block::BlockQuote { kind: _, blocks: _ } => {
                 todo!("handle markdown block quote inside list items")
             },
             Block::Heading(_, _) => todo!("handle markdown headings inside list items"),
@@ -371,10 +379,19 @@ fn text_to_boxes(text: Inlines) -> Expr {
                 Symbol::new("System`StyleBox"),
                 vec![Expr::string(code), Expr::string("Code")],
             ),
-            Inline::Link { label, destination } => Expr::normal(
+            Inline::Link {
+                // FIXME: Pass through this link type.
+                link_type: _,
+                // FIXME: Pass through this link title.
+                title: _,
+                dest_url,
+                // FIXME: Pass through this link id.
+                id: _,
+                content_text,
+            } => Expr::normal(
                 Symbol::new("System`ButtonBox"),
                 vec![
-                    text_to_boxes(label),
+                    text_to_boxes(content_text),
                     Expr::normal(
                         Symbol::new("System`Rule"),
                         vec![
@@ -391,7 +408,7 @@ fn text_to_boxes(text: Inlines) -> Expr {
                                 vec![
                                     Expr::normal(
                                         Symbol::new("System`URL"),
-                                        vec![Expr::string(destination.clone())],
+                                        vec![Expr::string(dest_url.clone())],
                                     ),
                                     Expr::from(Symbol::new("System`None")),
                                 ],
@@ -402,7 +419,7 @@ fn text_to_boxes(text: Inlines) -> Expr {
                         Symbol::new("System`Rule"),
                         vec![
                             Expr::from(Symbol::new("System`ButtonNote")),
-                            Expr::string(destination),
+                            Expr::string(dest_url),
                         ],
                     ),
                 ],

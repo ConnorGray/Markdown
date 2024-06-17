@@ -4,13 +4,49 @@
 //! This module compensates for the fact that the `pulldown-cmark` crate is
 //! focused on efficient incremental output (pull parsing), and consequently
 //! doesn't provide it's own AST types.
+//!
+//! | Function                           | Input      | Output       |
+//! |------------------------------------|------------|--------------|
+//! | [`markdown_to_ast()`]              | `&str`     | `Vec<Block>` |
+//! | [`ast_to_markdown()`]              | `&[Block]` | `String`     |
+//! | [`ast_to_events()`]                | `&[Block]` | `Vec<Event>` |
+//! | [`events_to_ast()`]                | `&[Event]` | `Vec<Block>` |
+//! | [`events_to_markdown()`]           | `&[Event]` | `String`     |
+//! | [`markdown_to_events()`]           | `&str`     | `Vec<Event>` |
+//!
+//! ### Terminology
+//!
+//! | Term     | Type                 | Description                |
+//! |----------|----------------------|----------------------------|
+//! | Markdown | `String`             | Raw Markdown source string |
+//! | Events   | `&[Event]`           | Markdown parsed by [`pulldown-cmark`](https://crates.io/crates/pulldown-cmark) into a flat sequence of parser [`Event`]s |
+//! | AST      | `Block` / `&[Block]` | Markdown parsed by `markdown-ast` into a hierarchical structure of [`Block`]s |
+//!
+//! ### Processing
+//!
+//! ```text
+//!     String => Events => Blocks => Events => String
+//!     |_____ A ______|    |______ C _____|
+//!               |______ B _____|    |______ D _____|
+//!     |__________ E ___________|
+//!                         |___________ F __________|
+//! ```
+//!
+//! - **A** — [`markdown_to_events()`] (wraps [`pulldown_cmark::Parser`])
+//! - **B** — [`events_to_ast()`]
+//! - **C** — [`ast_to_events()`]
+//! - **D** — [`events_to_markdown()`] (wraps [`pulldown_cmark_to_cmark::cmark()`])
+//! - **E** — [`markdown_to_ast()`]
+//! - **F** — [`ast_to_markdown()`]
+//!
 
+mod flatten;
 mod unflatten;
 
 
 use std::mem;
 
-use pulldown_cmark::{self as md, Event, LinkType, Tag};
+use pulldown_cmark::{self as md, CowStr, Event, Tag};
 
 use self::unflatten::UnflattenedEvent;
 
@@ -34,15 +70,23 @@ pub enum Block {
     /// *CommonMark Spec:* [indented code blocks](https://spec.commonmark.org/0.30/#indented-code-blocks),
     /// [fenced code blocks](https://spec.commonmark.org/0.30/#fenced-code-blocks)
     CodeBlock {
-        /// If this `CodeBlock` is a fenced code block, this is its info string.
+        /// Indicates whether this is a fenced or indented code block.
+        ///
+        /// If this `CodeBlock` is a fenced code block, this contains its info
+        /// string.
         ///
         /// *CommonMark Spec:* [info string](https://spec.commonmark.org/0.30/#info-string)
-        info_string: Option<String>,
+        kind: CodeBlockKind,
         code: String,
     },
     /// *CommonMark Spec:* [block quotes](https://spec.commonmark.org/0.30/#block-quotes)
-    BlockQuote(Vec<Block>),
+    BlockQuote {
+        // TODO: Document
+        kind: Option<md::BlockQuoteKind>,
+        blocks: Vec<Block>,
+    },
     Table {
+        alignments: Vec<md::Alignment>,
         headers: Vec<Inlines>,
         rows: Vec<Vec<Inlines>>,
     },
@@ -67,15 +111,31 @@ pub enum Inline {
     Strong(Inlines),
     Strikethrough(Inlines),
     Code(String),
-    Link { label: Inlines, destination: String },
+    // TODO:
+    //  Document every type of Inline::Link value and what its equivalent source
+    //  is.
+    Link {
+        link_type: md::LinkType,
+        dest_url: String,
+        title: String,
+        id: String,
+        content_text: Inlines,
+    },
     SoftBreak,
     HardBreak,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum CodeBlockKind {
+    Fenced(String),
+    Indented,
+}
+
 //======================================
-// AST Builder
+// Public API Functions
 //======================================
 
+/// Parse Markdown input string into AST [`Block`]s.
 pub fn markdown_to_ast(input: &str) -> Vec<Block> {
     /* For Markdown parsing debugging.
     {
@@ -99,10 +159,81 @@ pub fn markdown_to_ast(input: &str) -> Vec<Block> {
     }
     */
 
-    let events = unflatten::parse_markdown_to_unflattened_events(input);
+    let events = markdown_to_events(input);
 
-    events_to_blocks(events)
+    return events_to_ast(events);
 }
+
+/// Convert AST [`Block`]s into a Markdown string.
+pub fn ast_to_markdown(blocks: &[Block]) -> String {
+    let events = ast_to_events(blocks);
+
+    return events_to_markdown(events);
+}
+
+/// Convert [`Event`]s into a Markdown string.
+///
+/// This is a thin wrapper around [`pulldown_cmark_to_cmark::cmark_with_options`].
+pub fn events_to_markdown<'e, I: IntoIterator<Item = Event<'e>>>(events: I) -> String {
+    let mut string = String::new();
+
+    let options = default_to_markdown_options();
+
+    let _: pulldown_cmark_to_cmark::State = pulldown_cmark_to_cmark::cmark_with_options(
+        events.into_iter(),
+        &mut string,
+        options,
+    )
+    .expect("error converting Event sequent to Markdown string");
+
+    string
+}
+
+/// Convert AST [`Block`]s into an [`Event`] sequence.
+pub fn ast_to_events(blocks: &[Block]) -> Vec<Event> {
+    let mut events: Vec<Event> = Vec::new();
+
+    for block in blocks {
+        let events = &mut events;
+
+        block_to_events(&block, events);
+    }
+
+    events
+}
+
+/// Parse [`Event`]s into AST [`Block`]s.
+pub fn events_to_ast<'i, I: IntoIterator<Item = Event<'i>>>(events: I) -> Vec<Block> {
+    let events = unflatten::parse_markdown_to_unflattened_events(events.into_iter());
+
+    ast_events_to_ast(events)
+}
+
+/// Parse Markdown input string into [`Event`]s.
+pub fn markdown_to_events<'i>(input: &'i str) -> impl Iterator<Item = Event<'i>> {
+    // Set up options and parser. Strikethroughs are not part of the CommonMark standard
+    // and we therefore must enable it explicitly.
+    let mut options = md::Options::empty();
+    options.insert(md::Options::ENABLE_STRIKETHROUGH);
+    options.insert(md::Options::ENABLE_TABLES);
+    md::Parser::new_ext(input, options)
+}
+
+fn default_to_markdown_options() -> pulldown_cmark_to_cmark::Options<'static> {
+    pulldown_cmark_to_cmark::Options {
+        // newlines_after_paragraph: 2,
+        // newlines_after_headline: 0,
+        // newlines_after_codeblock: 0,
+        // newlines_after_list: 1,
+        // newlines_after_rest: 0,
+        code_block_token_count: 3,
+        ..pulldown_cmark_to_cmark::Options::default()
+    }
+}
+
+//======================================
+// AST Builder
+//======================================
 
 /// Returns `true` if `event` contains content that can be added "inline" with text
 /// content.
@@ -140,12 +271,13 @@ fn is_inline(event: &UnflattenedEvent) -> bool {
             Tag::BlockQuote(_kind) => false,
             Tag::Table(_) => false,
             Tag::TableHead | Tag::TableRow => unreachable!(),
+            Tag::Link { .. } => true,
             _ => todo!("handle tag: {tag:?}"),
         },
     }
 }
 
-fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
+fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
     let mut complete: Vec<Block> = vec![];
 
     let mut text_spans: Vec<Inline> = vec![];
@@ -197,18 +329,19 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
 
                     Tag::Link {
                         link_type,
-                        dest_url: destination,
-                        title: label,
-                        // TODO: Use this `id`?
-                        id: _,
+                        dest_url,
+                        title,
+                        id,
                     } => {
-                        let text = unwrap_text(events);
-                        text_spans.push(Inline::from_link(
+                        let content_text = unwrap_text(events);
+
+                        text_spans.push(Inline::Link {
                             link_type,
-                            text,
-                            destination.to_string(),
-                            label.to_string(),
-                        ))
+                            dest_url: dest_url.to_string(),
+                            title: title.to_string(),
+                            id: id.to_string(),
+                            content_text,
+                        })
                     },
 
                     //
@@ -237,7 +370,7 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                                 events: item_events,
                             } = event
                             {
-                                let item_blocks = events_to_blocks(item_events);
+                                let item_blocks = ast_events_to_ast(item_events);
                                 items.push(ListItem(item_blocks));
                             } else {
                                 todo!("handle list element: {event:?}");
@@ -247,28 +380,24 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         complete.push(Block::List(items));
                     },
                     Tag::Item => {
-                        complete.extend(events_to_blocks(events));
+                        complete.extend(ast_events_to_ast(events));
                     },
                     Tag::CodeBlock(kind) => {
-                        let fence_label = match kind {
-                            md::CodeBlockKind::Indented => None,
-                            md::CodeBlockKind::Fenced(label) => Some(label.to_string()),
-                        };
-
                         let text_spans = unwrap_text(events);
                         let code_text = text_to_string(&text_spans);
 
+                        let kind = CodeBlockKind::from_pulldown_cmark(kind);
+
                         complete.push(Block::CodeBlock {
-                            info_string: fence_label,
+                            kind,
                             code: code_text,
                         })
                     },
-                    Tag::BlockQuote(_kind) => {
-                        let blocks = events_to_blocks(events);
-                        complete.push(Block::BlockQuote(blocks))
+                    Tag::BlockQuote(kind) => {
+                        let blocks = ast_events_to_ast(events);
+                        complete.push(Block::BlockQuote { kind, blocks })
                     },
-                    // TODO: Support table column alignments.
-                    Tag::Table(_alignments) => {
+                    Tag::Table(alignments) => {
                         let mut events = events.into_iter();
                         let header_events = match events.next().unwrap() {
                             UnflattenedEvent::Event(_) => panic!(),
@@ -310,7 +439,11 @@ fn events_to_blocks(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                             rows.push(row);
                         }
 
-                        complete.push(Block::Table { headers, rows })
+                        complete.push(Block::Table {
+                            alignments,
+                            headers,
+                            rows,
+                        })
                     },
                     _ => todo!("handle: {tag:?}"),
                 }
@@ -368,18 +501,19 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
                 },
                 Tag::Link {
                     link_type,
-                    dest_url: destination,
-                    title: label,
-                    // TODO: Use this `id`?
-                    id: _,
+                    dest_url,
+                    title,
+                    id,
                 } => {
-                    let text = unwrap_text(events);
-                    text_spans.push(Inline::from_link(
+                    let content_text = unwrap_text(events);
+
+                    text_spans.push(Inline::Link {
                         link_type,
-                        text,
-                        destination.to_string(),
-                        label.to_string(),
-                    ))
+                        dest_url: dest_url.to_string(),
+                        title: title.to_string(),
+                        id: id.to_string(),
+                        content_text,
+                    })
                 },
                 _ => todo!("handle {tag:?}"),
             },
@@ -425,6 +559,10 @@ fn text_to_string(Inlines(text_spans): &Inlines) -> String {
 //======================================
 
 impl Inline {
+    pub fn text<S: Into<String>>(s: S) -> Self {
+        Inline::Text(s.into())
+    }
+
     pub fn emphasis(inline: Inline) -> Self {
         Inline::Emphasis(Inlines(vec![inline]))
     }
@@ -437,44 +575,41 @@ impl Inline {
         Inline::Strikethrough(Inlines(vec![inline]))
     }
 
-    fn from_link(
-        link_type: LinkType,
-        text: Inlines,
-        destination: String,
-        label: String,
-    ) -> Inline {
-        if !label.is_empty() {
-            eprintln!("warning: link label is ignored: {label:?}");
-        }
-
-        match link_type {
-            LinkType::Inline => (),
-            LinkType::Reference => (),
-            LinkType::Shortcut => (),
-            LinkType::Collapsed => (),
-            LinkType::Autolink => (),
-            LinkType::Email => (),
-            // Unknown
-            LinkType::ReferenceUnknown
-            | LinkType::CollapsedUnknown
-            | LinkType::ShortcutUnknown => {
-                eprintln!(
-                    "warning: unable to resolve location of link with text '{}'",
-                    text_to_string(&text)
-                )
-            },
-        }
-
-        Inline::Link {
-            label: text,
-            destination,
-        }
+    pub fn code<S: Into<String>>(s: S) -> Self {
+        Inline::Code(s.into())
     }
 }
 
 impl Block {
     fn paragraph(text: Vec<Inline>) -> Block {
         Block::Paragraph(Inlines(text))
+    }
+}
+
+impl CodeBlockKind {
+    pub fn info_string(&self) -> Option<&str> {
+        match self {
+            CodeBlockKind::Fenced(info_string) => Some(info_string.as_str()),
+            CodeBlockKind::Indented => None,
+        }
+    }
+
+    pub(crate) fn from_pulldown_cmark(kind: md::CodeBlockKind) -> Self {
+        match kind {
+            md::CodeBlockKind::Indented => CodeBlockKind::Indented,
+            md::CodeBlockKind::Fenced(info_string) => {
+                CodeBlockKind::Fenced(info_string.to_string())
+            },
+        }
+    }
+
+    pub(crate) fn to_pulldown_cmark<'s>(&'s self) -> md::CodeBlockKind<'s> {
+        match self {
+            CodeBlockKind::Fenced(info) => {
+                md::CodeBlockKind::Fenced(CowStr::from(info.as_str()))
+            },
+            CodeBlockKind::Indented => md::CodeBlockKind::Indented,
+        }
     }
 }
 
@@ -489,11 +624,175 @@ impl IntoIterator for Inlines {
 }
 
 //======================================
-// Tests
+// AST blocks to Events
+//======================================
+
+fn block_to_events<'ast>(block: &'ast Block, events: &mut Vec<Event<'ast>>) {
+    match block {
+        Block::Paragraph(inlines) => wrap(Tag::Paragraph, events, |events| {
+            inlines_to_events(inlines, events)
+        }),
+        Block::List(list_items) => {
+            // TODO: Handle this for numbered lists.
+            let first_item_number = None;
+
+            wrap(Tag::List(first_item_number), events, |events| {
+                for ListItem(list_item_blocks) in list_items {
+                    wrap(Tag::Item, events, |events| {
+                        // NOTE:
+                        //  Handle a special case where a single-item list
+                        //  containing a sequence of inlines is parsed by
+                        //  clap-markdown NOT wrapped in paired
+                        //  Start(Tag::Paragraph) / End(_) events.
+                        match list_item_blocks.as_slice() {
+                            [Block::Paragraph(inlines)] if list_items.len() == 1 => {
+                                inlines_to_events(inlines, events);
+
+                                // Return from inner closure.
+                                return;
+                            },
+                            _ => (),
+                        }
+
+                        for list_item_block in list_item_blocks {
+                            block_to_events(list_item_block, events);
+                        }
+                    });
+                }
+            })
+        },
+        Block::Heading(level, inlines) => {
+            let tag = Tag::Heading {
+                level: *level,
+                // FIXME: Set this id.
+                id: None,
+                // FIXME: Support these classes and attrs.
+                classes: Vec::new(),
+                attrs: Vec::new(),
+            };
+
+            wrap(tag, events, |events| inlines_to_events(inlines, events));
+        },
+        Block::CodeBlock { kind, code } => {
+            let kind = kind.to_pulldown_cmark();
+
+            wrap(Tag::CodeBlock(kind), events, |events| {
+                // FIXME: Is this the right event for raw codeblock content?
+                events.push(Event::Text(CowStr::from(code.as_str())))
+            })
+        },
+        Block::BlockQuote { kind, blocks } => {
+            wrap(Tag::BlockQuote(*kind), events, |events| {
+                for block in blocks {
+                    block_to_events(block, events)
+                }
+            })
+        },
+        Block::Table {
+            alignments,
+            headers,
+            rows,
+        } => {
+            // Structure of a table in Events:
+            //
+            // * Tag::Table
+            //   * Tag::TableHead
+            //     * Tag::TableCell...
+            //   * Tag::TableRow
+            //     * Tag::TableCell...
+
+            wrap(Tag::Table(alignments.clone()), events, |events| {
+                wrap(Tag::TableHead, events, |events| {
+                    for header_cell in headers {
+                        wrap(Tag::TableCell, events, |events| {
+                            inlines_to_events(header_cell, events);
+                        })
+                    }
+                });
+
+                for row in rows {
+                    wrap(Tag::TableRow, events, |events| {
+                        for row_cell in row {
+                            wrap(Tag::TableCell, events, |events| {
+                                inlines_to_events(row_cell, events);
+                            })
+                        }
+                    })
+                }
+            })
+        },
+        Block::Rule => events.push(Event::Rule),
+    }
+}
+
+fn wrap<'ast, F: FnOnce(&mut Vec<Event<'ast>>)>(
+    tag: Tag<'ast>,
+    events: &mut Vec<Event<'ast>>,
+    action: F,
+) {
+    let end = tag.to_end();
+
+    events.push(Event::Start(tag));
+    action(events);
+    events.push(Event::End(end));
+}
+
+fn inlines_to_events<'ast>(inlines: &'ast Inlines, events: &mut Vec<Event<'ast>>) {
+    let Inlines(inlines) = inlines;
+
+    for inline in inlines {
+        match inline {
+            Inline::Text(text) => {
+                events.push(Event::Text(CowStr::from(text.as_str())));
+            },
+            Inline::Emphasis(inlines) => wrap(Tag::Emphasis, events, |events| {
+                inlines_to_events(inlines, events)
+            }),
+            Inline::Strong(inlines) => wrap(Tag::Strong, events, |events| {
+                inlines_to_events(inlines, events)
+            }),
+            Inline::Strikethrough(inlines) => {
+                wrap(Tag::Strikethrough, events, |events| {
+                    inlines_to_events(inlines, events)
+                })
+            },
+            Inline::Code(code) => events.push(Event::Code(CowStr::from(code.as_str()))),
+            Inline::Link {
+                link_type,
+                dest_url,
+                title,
+                id,
+                content_text,
+            } => wrap(
+                Tag::Link {
+                    link_type: *link_type,
+                    dest_url: CowStr::from(dest_url.as_str()),
+                    // FIXME:
+                    //  Pass through this title; have a test that fails
+                    //  if this is empty.
+                    title: CowStr::from(title.as_str()),
+                    // FIXME: Passthrough this id
+                    // FIXME:
+                    //  Add test for the value of this field for every
+                    //  link type.
+                    id: CowStr::from(id.as_str()),
+                },
+                events,
+                |events| inlines_to_events(content_text, events),
+            ),
+            Inline::SoftBreak => events.push(Event::SoftBreak),
+            Inline::HardBreak => events.push(Event::HardBreak),
+        }
+    }
+}
+
+//======================================
+// Tests: Markdown to AST parsing
 //======================================
 
 #[test]
-fn tests() {
+fn test_markdown_to_ast() {
+    use indoc::indoc;
     use pretty_assertions::assert_eq;
 
     assert_eq!(
@@ -543,8 +842,11 @@ fn tests() {
     assert_eq!(
         markdown_to_ast("**[example](example.com)**"),
         vec![Block::paragraph(vec![Inline::strong(Inline::Link {
-            label: Inlines(vec![Inline::Text("example".into())]),
-            destination: "example.com".into()
+            link_type: md::LinkType::Inline,
+            dest_url: "example.com".into(),
+            title: String::new(),
+            id: String::new(),
+            content_text: Inlines(vec![Inline::Text("example".into())]),
         })])]
     );
 
@@ -589,12 +891,43 @@ fn tests() {
             Inline::strikethrough(Inline::Text("hello".into()),)
         ])])])]
     );
-}
 
-#[test]
-fn test_structure() {
-    use indoc::indoc;
-    use pretty_assertions::assert_eq;
+    //----------------------------------
+
+    let input = "\
+* And **bold** text.
+  
+  * With nested list items.
+    
+    * `md2nb` supports nested lists up to three levels deep.
+";
+
+    let ast = vec![Block::List(vec![ListItem(vec![
+        Block::paragraph(vec![
+            Inline::text("And "),
+            Inline::strong(Inline::text("bold")),
+            Inline::text(" text."),
+        ]),
+        Block::List(vec![ListItem(vec![
+            Block::paragraph(vec![Inline::text("With nested list items.")]),
+            Block::List(vec![ListItem(vec![Block::paragraph(vec![
+                Inline::code("md2nb"),
+                Inline::text(" supports nested lists up to three levels deep."),
+            ])])]),
+        ])]),
+    ])])];
+
+    assert_eq!(markdown_to_ast(input), ast);
+
+    // Sanity check conversion to event stream.
+    assert_eq!(
+        markdown_to_events(input).collect::<Vec<_>>(),
+        ast_to_events(&ast)
+    );
+
+    //----------------------------------
+    // Test structures
+    //----------------------------------
 
     assert_eq!(
         markdown_to_ast(indoc!(
@@ -812,4 +1145,93 @@ fn test_structure() {
             ])
         ]
     );
+}
+
+//======================================
+// Tests: AST to Markdown string
+//======================================
+
+#[test]
+fn test_ast_to_markdown() {
+    use indoc::indoc;
+    // use pretty_assertions::assert_eq;
+
+    assert_eq!(
+        ast_to_markdown(&[Block::paragraph(vec![Inline::Text("hello".into())])]),
+        "hello"
+    );
+
+    assert_eq!(
+        ast_to_markdown(&[Block::List(vec![ListItem(vec![
+            Block::paragraph(vec![Inline::Text("hello".into())]),
+            Block::paragraph(vec![Inline::Text("world".into())])
+        ])])]),
+        indoc!(
+            "
+            * hello
+              
+              world"
+        ),
+    )
+}
+
+/// Tests that some of the larger Markdown documents in this repository
+/// all round-trip when processed:
+#[test]
+fn test_md_documents_roundtrip() {
+    let kitchen_sink_md = include_str!("../../md2nb/docs/examples/kitchen-sink.md");
+
+    // FIXME:
+    //  Fix the bugs requiring these hacky removals from kitchen-sink.md
+    //  that are needed to make the tests below pass.
+    let kitchen_sink_md = kitchen_sink_md
+        .replace("\n    \"This is an indented code block.\"\n", "")
+        .replace("\nThis is a [shortcut] reference link.\n", "")
+        .replace("\nThis is a [full reference][full reference] link.\n", "")
+        .replace("\n[full reference]: https://example.org\n", "")
+        .replace("[shortcut]: https://example.org\n", "");
+
+    assert_roundtrip(&kitchen_sink_md);
+
+    //==================================
+    // README.md
+    //==================================
+
+    let readme = include_str!("../../../README.md");
+
+    assert_roundtrip(readme);
+}
+
+#[cfg(test)]
+fn assert_roundtrip(markdown: &str) {
+    use pretty_assertions::assert_eq;
+
+    // Recall:
+    //
+    //     String => Events => Blocks => Events => String
+    //     |_____ A ______|    |______ C _____|
+    //               |______ B _____|    |______ D _____|
+    //     |__________ E ___________|
+    //                         |___________ F __________|
+
+    // Do A to get Events
+    let original_events: Vec<Event> = markdown_to_events(markdown).collect();
+
+    // Do B to get AST Blocks
+    let ast: Vec<Block> = events_to_ast(original_events.clone());
+
+    // println!("ast = {ast:#?}");
+
+    // Do C to get Events again
+    let processed_events: Vec<Event> = ast_to_events(&ast);
+
+    // println!("original_events = {original_events:#?}");
+
+    // Test that A => B => C is equivalent to just A.
+    // I.e. that converting an Event stream to and from an AST is lossless.
+    assert_eq!(processed_events, original_events);
+
+    // Test that A => B => C => D produces Markdown equivalent to the original
+    // Markdown string.
+    assert_eq!(ast_to_markdown(&ast), markdown);
 }
