@@ -4,6 +4,8 @@ MarkdownElement
 
 MarkdownParse
 
+ToMarkdownString
+
 ConvertToMarkdown
 
 MarkdownError
@@ -15,8 +17,9 @@ PacletInstall /@ PacletObject["ConnorGray/NotebookWebsiteTools"]["Dependencies"]
 
 Needs["Wolfram`ErrorTools`"]
 
-Needs["ConnorGray`Markdown`ConvertToMarkdown`"]
 Needs["ConnorGray`Markdown`Library`"]
+Needs["ConnorGray`Markdown`ConvertToMarkdown`"]
+Needs["ConnorGray`Markdown`ToMarkdownString`"]
 
 CreateErrorType[MarkdownError, {}]
 

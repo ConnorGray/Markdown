@@ -1,10 +1,18 @@
+mod from_expr_utils;
+
 use wolfram_library_link::{
     export,
-    expr::{Expr, Symbol},
+    expr::{Expr, Number, Symbol},
 };
 
 use markdown_ast::{Block, HeadingLevel, Inline, Inlines, ListItem};
 
+use self::from_expr_utils::try_headed;
+
+// TODO(cleanup):
+//  Rename to MarkdownInline[..] and MarkdownBlock[..]?
+//  Currently the "kind" of MarkdownElement is either an "inline" or "block"
+//  element but that is not explicit to the caller.
 #[allow(non_upper_case_globals)]
 const MarkdownElement: &str = "ConnorGray`Markdown`MarkdownElement";
 
@@ -29,8 +37,21 @@ fn parse_markdown(args: Vec<Expr>) -> Expr {
     Expr::list(ast)
 }
 
+#[export(wstp)]
+fn markdown_ast_to_markdown(args: Vec<Expr>) -> Expr {
+    let [blocks]: [Expr; 1] = match args.try_into() {
+        Ok(args) => args,
+        Err(args) => panic!("expected one argument, got {}", args.len()),
+    };
+
+    let blocks =
+        parse_expr_blocks(&blocks).expect("error converting expr to Markdown AST blocks");
+
+    Expr::string(markdown_ast::ast_to_markdown(&blocks))
+}
+
 //======================================
-// Expr Conversion
+// Block to Expr Conversion
 //======================================
 
 fn block_to_expr(block: &Block) -> Expr {
@@ -158,4 +179,117 @@ fn list_item_to_expr(ListItem(blocks): &ListItem) -> Expr {
         Symbol::new(MarkdownElement),
         vec![Expr::string("ListItem"), Expr::list(blocks)],
     )
+}
+
+//======================================
+// Parse expressions to Blocks
+//======================================
+
+fn parse_expr_blocks(blocks: &Expr) -> Result<Vec<Block>, String> {
+    let blocks = try_headed(blocks, Symbol::new("System`List"))
+        .expect("expected 1st argument to be a list");
+
+    let blocks: Vec<Block> = blocks
+        .iter()
+        .map(parse_expr_to_block)
+        .collect::<Result<_, _>>()?;
+
+    Ok(blocks)
+}
+
+fn parse_expr_to_block(expr: &Expr) -> Result<Block, String> {
+    // TODO(cleanup): Require a standardized argument structure for
+    //  MarkdownElement so that indexing into it is easier? (Like XMLElement.)
+    let element_args = try_headed(expr, Symbol::new(MarkdownElement))?;
+
+    if element_args.len() < 2 {
+        return Err(format!(
+            "expected MarkdownElement[..] to have at least 2 args: {expr}",
+        ));
+    }
+
+    let kind = &element_args[0];
+
+    let kind = kind.try_as_str().ok_or_else(|| {
+        "expected MarkdownElement[...] first arg to be string".to_owned()
+    })?;
+
+    let ast = match (kind, &element_args[1..]) {
+        ("Paragraph", [inlines]) => {
+            let inlines = parse_expr_inlines(inlines)?;
+
+            Block::Paragraph(inlines)
+        },
+        ("Heading", [level, inlines]) => {
+            let level = match level.try_as_number() {
+                Some(Number::Integer(1)) => HeadingLevel::H1,
+                Some(Number::Integer(2)) => HeadingLevel::H1,
+                Some(Number::Integer(3)) => HeadingLevel::H1,
+                Some(Number::Integer(4)) => HeadingLevel::H1,
+                Some(Number::Integer(5)) => HeadingLevel::H1,
+                Some(Number::Integer(6)) => HeadingLevel::H1,
+                _ => return Err(format!("unsupported heading level value: {level}")),
+            };
+
+            let inlines = parse_expr_inlines(inlines)?;
+
+            Block::Heading(level, inlines)
+        },
+        (other, _) => panic!("unrecognized block MarkdownElement[{other:?}, ..] kind"),
+    };
+
+    Ok(ast)
+}
+
+fn parse_expr_to_inline(expr: &Expr) -> Result<Inline, String> {
+    // TODO(polish): Support a "bare" string converting to
+    //  Inline::Text(...)?
+    // if let Some(str) = expr.try_as_str() {
+    //     return Ok(Inline::Text(str.to_owned()));
+    // }
+
+    let element_args = try_headed(expr, Symbol::new(MarkdownElement))?;
+
+    if element_args.len() < 2 {
+        return Err(format!(
+            "expected MarkdownElement[..] to have at least 2 args: {expr}",
+        ));
+    }
+
+    let kind = &element_args[0];
+
+    let kind = kind.try_as_str().ok_or_else(|| {
+        "expected MarkdownElement[...] first arg to be string".to_owned()
+    })?;
+
+    let inline = match (kind, &element_args[1..]) {
+        ("Text", [text]) => {
+            let text: &str = text.try_as_str().ok_or_else(|| {
+                "expected MarkdownElement[\"Text\", ..] 2nd argument to be a string"
+                    .to_owned()
+            })?;
+
+            Inline::Text(text.to_owned())
+        },
+        ("Strong", [inlines]) => {
+            let inlines = parse_expr_inlines(inlines)?;
+
+            Inline::Strong(inlines)
+        },
+        (other, _) => panic!("unrecognized inline MarkdownElement[{other:?}, ..] form"),
+    };
+
+    Ok(inline)
+}
+
+fn parse_expr_inlines(inlines: &Expr) -> Result<Inlines, String> {
+    let inlines = try_headed(inlines, Symbol::new("System`List"))
+        .expect("expected 1st argument to be a list");
+
+    let inlines: Vec<Inline> = inlines
+        .iter()
+        .map(parse_expr_to_inline)
+        .collect::<Result<_, _>>()?;
+
+    Ok(Inlines(inlines))
 }

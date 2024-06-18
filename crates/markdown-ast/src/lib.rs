@@ -40,7 +40,6 @@
 //! - **F** — [`ast_to_markdown()`]
 //!
 
-mod flatten;
 mod unflatten;
 
 
