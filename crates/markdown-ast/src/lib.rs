@@ -254,6 +254,7 @@ mod unflatten;
 
 /// Ensure that doc tests in the README.md file get run.
 /// See: <https://connorgray.com/reference/creating-a-new-rust-crate#test-readmemd-examples>
+#[cfg(any(doc, doctest))]
 #[doc(hidden)]
 mod test_readme {
     #![doc = include_str!("../../../README.md")]
