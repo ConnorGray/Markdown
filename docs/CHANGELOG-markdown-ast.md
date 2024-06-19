@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.1.1] - 2024-06-19
+
+### Fixed
+
+* Fixed an issue building markdown-ast v0.1.0 in the docs.rs build environment.
+
+
+
 ## [0.1.0] - 2024-06-19
 
 Initial release of `markdown-ast`.
@@ -22,7 +30,7 @@ Initial release of `markdown-ast`.
 <!-- Unreleased -->
 
 <!-- This needs to be updated for each tagged release. -->
-[Unreleased]: https://github.com/ConnorGray/Markdown/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ConnorGray/Markdown/compare/v0.1.1...HEAD
 
-<!-- [0.2.0]: https://github.com/ConnorGray/Markdown/compare/v0.1.0...v0.2.0 -->
+[0.1.1]: https://github.com/ConnorGray/Markdown/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ConnorGray/Markdown/releases/tag/v0.1.0
