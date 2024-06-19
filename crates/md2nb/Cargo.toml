@@ -8,7 +8,7 @@ description = "Convert Markdown files into Wolfram Notebooks"
 authors = [
     "Connor Gray <code@connorgray.com>"
 ]
-repository = "https://github.com/ConnorGray/md2nb"
+repository = "https://github.com/ConnorGray/Markdown"
 readme = "README.md"
 keywords = ["markdown", "notebook", "convert", "wolfram"]
 categories = ["encoding", "visualization", "development-tools"]
