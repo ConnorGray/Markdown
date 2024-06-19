@@ -737,7 +737,8 @@ fn text_to_string(Inlines(text_spans): &Inlines) -> String {
 //======================================
 
 impl Inline {
-    pub fn text<S: Into<String>>(s: S) -> Self {
+    /// Construct a inline containing a piece of plain text.
+    pub fn plain_text<S: Into<String>>(s: S) -> Self {
         Inline::Text(s.into())
     }
 
@@ -758,9 +759,32 @@ impl Inline {
     }
 }
 
+impl Inlines {
+    /// Construct an inlines sequence containing a single inline piece of plain
+    /// text.
+    pub fn plain_text<S: Into<String>>(inline: S) -> Self {
+        return Inlines(vec![Inline::Text(inline.into())]);
+    }
+}
+
 impl Block {
-    fn paragraph(text: Vec<Inline>) -> Block {
+    /// Construct a paragraph block containing a single inline piece of plain
+    /// text.
+    pub fn plain_text_paragraph<S: Into<String>>(inline: S) -> Self {
+        return Block::Paragraph(Inlines(vec![Inline::Text(inline.into())]));
+    }
+
+    pub fn paragraph(text: Vec<Inline>) -> Block {
         Block::Paragraph(Inlines(text))
+    }
+}
+
+impl ListItem {
+    /// Construct a list item containing a single inline piece of plain text.
+    pub fn plain_text<S: Into<String>>(inline: S) -> Self {
+        return ListItem(vec![Block::Paragraph(Inlines(vec![Inline::Text(
+            inline.into(),
+        )]))]);
     }
 }
 
@@ -1082,15 +1106,15 @@ fn test_markdown_to_ast() {
 
     let ast = vec![Block::List(vec![ListItem(vec![
         Block::paragraph(vec![
-            Inline::text("And "),
-            Inline::strong(Inline::text("bold")),
-            Inline::text(" text."),
+            Inline::plain_text("And "),
+            Inline::strong(Inline::plain_text("bold")),
+            Inline::plain_text(" text."),
         ]),
         Block::List(vec![ListItem(vec![
-            Block::paragraph(vec![Inline::text("With nested list items.")]),
+            Block::paragraph(vec![Inline::plain_text("With nested list items.")]),
             Block::List(vec![ListItem(vec![Block::paragraph(vec![
                 Inline::code("md2nb"),
-                Inline::text(" supports nested lists up to three levels deep."),
+                Inline::plain_text(" supports nested lists up to three levels deep."),
             ])])]),
         ])]),
     ])])];
