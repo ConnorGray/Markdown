@@ -9,8 +9,8 @@
 This repository contains two projects for working with Markdown
 documents:
 
-* `markdown-ast` — a Rust crate modeling Markdown
-  syntax as an AST.
+* [`markdown-ast`](https://crates.io/crates/markdown-ast)
+  — a Rust crate modeling Markdown syntax as an AST.
 
 * `ConnorGray/Markdown` — a Wolfram paclet providing a
   symbolic representation of Markdown elements, and (**TODO**) notebook frontend
