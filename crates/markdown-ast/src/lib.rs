@@ -79,7 +79,7 @@
 //!
 //! ## Detailed Examples
 //!
-//! Parse varied Markdown to an AST representation:
+//! ##### Parse varied Markdown to an AST representation:
 //!
 //! ```
 //! use markdown_ast::{
@@ -120,6 +120,72 @@
 //!         ])
 //!     ])
 //! ]);
+//! ```
+//!
+//! ##### Synthesize Markdown using programmatic construction of the document:
+//!
+//! *Note:* This is a more user friendly alternative to a "string builder"
+//! approach where the raw Markdown string is constructed piece by piece,
+//! which suffers from extra bookkeeping that must be done to manage things like
+//! indent level and soft vs hard breaks.
+//!
+//! ```
+//! use markdown_ast::{
+//!     ast_to_markdown, Block, Inline, Inlines, ListItem,
+//!     HeadingLevel,
+//! };
+//! # use pretty_assertions::assert_eq;
+//!
+//! let tech_companies = vec![
+//!     ("Apple", 1976, 164_000),
+//!     ("Microsoft", 1975, 221_000),
+//!     ("Nvidia", 1993, 29_600),
+//! ];
+//!
+//! let ast = vec![
+//!     Block::Heading(HeadingLevel::H1, Inlines::plain_text("Tech Companies")),
+//!     Block::plain_text_paragraph("The following are major tech companies:"),
+//!     Block::List(Vec::from_iter(
+//!         tech_companies
+//!             .into_iter()
+//!             .map(|(company_name, founded, employee_count)| {
+//!                 ListItem(vec![
+//!                     Block::paragraph(vec![Inline::plain_text(company_name)]),
+//!                     Block::List(vec![
+//!                         ListItem::plain_text(format!("Founded: {founded}")),
+//!                         ListItem::plain_text(format!("Employee count: {employee_count}"))
+//!                     ])
+//!                 ])
+//!             })
+//!     ))
+//! ];
+//!
+//! let markdown: String = ast_to_markdown(&ast);
+//!
+//! assert_eq!(markdown, "\
+//! ## Tech Companies
+//!
+//! The following are major tech companies:
+//!
+//! * Apple
+//!  
+//!   * Founded: 1976
+//!  
+//!   * Employee count: 164000
+//!
+//! * Microsoft
+//!  
+//!   * Founded: 1975
+//!  
+//!   * Employee count: 221000
+//!
+//! * Nvidia
+//!  
+//!   * Founded: 1993
+//!  
+//!   * Employee count: 29600\
+//! ");
+//!
 //! ```
 //!
 //! ### Motivation and relation to `pulldown-cmark`
