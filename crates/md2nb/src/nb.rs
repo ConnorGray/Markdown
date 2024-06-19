@@ -18,7 +18,11 @@ pub fn block_to_cells(block: Block, opts: &Options) -> Vec<Expr> {
     block_to_cells_(&mut state, opts, block)
 }
 
-fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr> {
+fn block_to_cells_(
+    state: &mut State,
+    opts: &Options,
+    block: Block,
+) -> Vec<Expr> {
     match block {
         Block::Heading(level, text) => {
             let style = match level {
@@ -178,7 +182,10 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
                     .map(|content: Inlines| {
                         Expr::normal(
                             Symbol::new("System`Cell"),
-                            vec![inlines_to_text_data(content), Expr::from("Text")],
+                            vec![
+                                inlines_to_text_data(content),
+                                Expr::from("Text"),
+                            ],
                         )
                     })
                     .collect();
@@ -272,7 +279,10 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
                         )]),
                     ),
                     // CellFrameMargins->0,
-                    Expr::rule(Symbol::new("System`CellFrameMargins"), Expr::from(0)),
+                    Expr::rule(
+                        Symbol::new("System`CellFrameMargins"),
+                        Expr::from(0),
+                    ),
                     // CellFrameColor->GrayLevel[0.75],
                     Expr::rule(
                         Symbol::new("System`CellFrameColor"),
@@ -295,7 +305,10 @@ fn block_to_cells_(state: &mut State, opts: &Options, block: Block) -> Vec<Expr>
     }
 }
 
-fn list_item_to_cells(state: &mut State, ListItem(blocks): ListItem) -> Vec<Expr> {
+fn list_item_to_cells(
+    state: &mut State,
+    ListItem(blocks): ListItem,
+) -> Vec<Expr> {
     let mut cells = vec![];
 
     for block in blocks {
@@ -330,11 +343,15 @@ fn list_item_to_cells(state: &mut State, ListItem(blocks): ListItem) -> Vec<Expr
             Block::BlockQuote { kind: _, blocks: _ } => {
                 todo!("handle markdown block quote inside list items")
             },
-            Block::Heading(_, _) => todo!("handle markdown headings inside list items"),
+            Block::Heading(_, _) => {
+                todo!("handle markdown headings inside list items")
+            },
             Block::CodeBlock { .. } => {
                 todo!("handle markdown code block inside list item")
             },
-            Block::Table { .. } => todo!("handle markdown table inside list item"),
+            Block::Table { .. } => {
+                todo!("handle markdown table inside list item")
+            },
             Block::Rule => todo!("handle markdown rule inside list item"),
         }
     }

@@ -44,8 +44,8 @@ fn markdown_ast_to_markdown(args: Vec<Expr>) -> Expr {
         Err(args) => panic!("expected one argument, got {}", args.len()),
     };
 
-    let blocks =
-        parse_expr_blocks(&blocks).expect("error converting expr to Markdown AST blocks");
+    let blocks = parse_expr_blocks(&blocks)
+        .expect("error converting expr to Markdown AST blocks");
 
     Expr::string(markdown_ast::ast_to_markdown(&blocks))
 }
@@ -228,14 +228,20 @@ fn parse_expr_to_block(expr: &Expr) -> Result<Block, String> {
                 Some(Number::Integer(4)) => HeadingLevel::H1,
                 Some(Number::Integer(5)) => HeadingLevel::H1,
                 Some(Number::Integer(6)) => HeadingLevel::H1,
-                _ => return Err(format!("unsupported heading level value: {level}")),
+                _ => {
+                    return Err(format!(
+                        "unsupported heading level value: {level}"
+                    ))
+                },
             };
 
             let inlines = parse_expr_inlines(inlines)?;
 
             Block::Heading(level, inlines)
         },
-        (other, _) => panic!("unrecognized block MarkdownElement[{other:?}, ..] kind"),
+        (other, _) => {
+            panic!("unrecognized block MarkdownElement[{other:?}, ..] kind")
+        },
     };
 
     Ok(ast)
@@ -276,7 +282,9 @@ fn parse_expr_to_inline(expr: &Expr) -> Result<Inline, String> {
 
             Inline::Strong(inlines)
         },
-        (other, _) => panic!("unrecognized inline MarkdownElement[{other:?}, ..] form"),
+        (other, _) => {
+            panic!("unrecognized inline MarkdownElement[{other:?}, ..] form")
+        },
     };
 
     Ok(inline)

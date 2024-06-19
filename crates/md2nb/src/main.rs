@@ -1,6 +1,5 @@
 mod nb;
 
-
 use std::{path::PathBuf, process};
 
 use clap::Parser;
@@ -8,6 +7,7 @@ use clap::Parser;
 use wolfram_app_discovery::WolframApp;
 use wolfram_expr::{Expr, Symbol};
 use wstp::kernel::{self, WolframKernelProcess};
+
 
 /// Convert Markdown files into Wolfram Notebooks.
 #[derive(Parser, Debug)]
@@ -72,7 +72,8 @@ fn main() -> Result<(), kernel::Error> {
 
     // If `output` is a directory, automatically determine the file name from `input`.
     // E.g. `$ md2nb README.md` will automatically write to `./README.nb`.
-    let auto_file_name = format!("{}.nb", input.file_stem().unwrap().to_str().unwrap());
+    let auto_file_name =
+        format!("{}.nb", input.file_stem().unwrap().to_str().unwrap());
 
     let output = match output {
         Some(output) if output.is_dir() => output.join(auto_file_name),
@@ -126,9 +127,9 @@ fn main() -> Result<(), kernel::Error> {
             vec![
                 nb_obj,
                 Expr::from(
-                    output
-                        .to_str()
-                        .expect("output file path cannot be converted to a &str"),
+                    output.to_str().expect(
+                        "output file path cannot be converted to a &str",
+                    ),
                 ),
             ],
         )))
@@ -154,7 +155,9 @@ fn main() -> Result<(), kernel::Error> {
             Ok(_) => (),
             Err(err) => {
                 if err.code() != Some(wstp::sys::WSECLOSED) {
-                    println!("error: unexpected Kernel WSTP connection error: {err}");
+                    println!(
+                        "error: unexpected Kernel WSTP connection error: {err}"
+                    );
                 }
                 break;
             },
@@ -169,7 +172,9 @@ fn main() -> Result<(), kernel::Error> {
 
     if open {
         if cfg!(target_os = "macos") {
-            if let Err(err) = process::Command::new("open").arg(&output).output() {
+            if let Err(err) =
+                process::Command::new("open").arg(&output).output()
+            {
                 eprintln!("error: `--open` failed: {err}")
             }
         } else {
@@ -189,7 +194,9 @@ fn using_front_end(expr: Expr) -> Expr {
     Expr::normal(Symbol::new("System`UsingFrontEnd"), vec![expr])
 }
 
-fn create_notebook(kernel: &mut WolframKernelProcess) -> Result<Expr, kernel::Error> {
+fn create_notebook(
+    kernel: &mut WolframKernelProcess,
+) -> Result<Expr, kernel::Error> {
     let () = kernel
         .link()
         .put_eval_packet(&using_front_end(Expr::normal(
@@ -211,7 +218,9 @@ fn launch_default_kernel() -> Result<WolframKernelProcess, kernel::Error> {
     WolframKernelProcess::launch(&kernel)
 }
 
-fn skip_to_next_return_packet(link: &mut wstp::Link) -> Result<(), wstp::Error> {
+fn skip_to_next_return_packet(
+    link: &mut wstp::Link,
+) -> Result<(), wstp::Error> {
     use wstp::sys::*;
 
     loop {
@@ -238,7 +247,10 @@ fn get_system_expr(link: &mut wstp::Link) -> Result<Expr, wstp::Error> {
 
 /// Read all remaining data on the link and debug print it.
 #[allow(dead_code)]
-fn dump_tokens(link: &mut wstp::Link, indent: usize) -> Result<(), wstp::Error> {
+fn dump_tokens(
+    link: &mut wstp::Link,
+    indent: usize,
+) -> Result<(), wstp::Error> {
     use wstp::Token;
 
     let pad = format!("{:indent$}", "");

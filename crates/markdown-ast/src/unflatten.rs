@@ -46,7 +46,8 @@ impl<'a> Unflattener<'a> {
                 self.nested.push((tag, vec![]));
             },
             Event::End(tag) => {
-                let (tag2, inner) = self.nested.pop().expect("expected nested events");
+                let (tag2, inner) =
+                    self.nested.pop().expect("expected nested events");
 
                 debug_assert_eq!(tag, tag2.to_end());
 

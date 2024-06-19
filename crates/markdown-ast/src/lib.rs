@@ -406,17 +406,20 @@ pub fn ast_to_markdown(blocks: &[Block]) -> String {
 /// This is a thin wrapper around
 /// [`pulldown_cmark_to_cmark::cmark_with_options`], provided in this crate for
 /// consistency and ease of use.
-pub fn events_to_markdown<'e, I: IntoIterator<Item = Event<'e>>>(events: I) -> String {
+pub fn events_to_markdown<'e, I: IntoIterator<Item = Event<'e>>>(
+    events: I,
+) -> String {
     let mut string = String::new();
 
     let options = default_to_markdown_options();
 
-    let _: pulldown_cmark_to_cmark::State = pulldown_cmark_to_cmark::cmark_with_options(
-        events.into_iter(),
-        &mut string,
-        options,
-    )
-    .expect("error converting Event sequent to Markdown string");
+    let _: pulldown_cmark_to_cmark::State =
+        pulldown_cmark_to_cmark::cmark_with_options(
+            events.into_iter(),
+            &mut string,
+            options,
+        )
+        .expect("error converting Event sequent to Markdown string");
 
     string
 }
@@ -435,8 +438,11 @@ pub fn ast_to_events(blocks: &[Block]) -> Vec<Event> {
 }
 
 /// Parse [`Event`]s into AST [`Block`]s.
-pub fn events_to_ast<'i, I: IntoIterator<Item = Event<'i>>>(events: I) -> Vec<Block> {
-    let events = unflatten::parse_markdown_to_unflattened_events(events.into_iter());
+pub fn events_to_ast<'i, I: IntoIterator<Item = Event<'i>>>(
+    events: I,
+) -> Vec<Block> {
+    let events =
+        unflatten::parse_markdown_to_unflattened_events(events.into_iter());
 
     ast_events_to_ast(events)
 }
@@ -445,7 +451,9 @@ pub fn events_to_ast<'i, I: IntoIterator<Item = Event<'i>>>(events: I) -> Vec<Bl
 ///
 /// This is a thin wrapper around [`pulldown_cmark::Parser`], provided in this
 /// crate for consistency and ease of use.
-pub fn markdown_to_events<'i>(input: &'i str) -> impl Iterator<Item = Event<'i>> {
+pub fn markdown_to_events<'i>(
+    input: &'i str,
+) -> impl Iterator<Item = Event<'i>> {
     // Set up options and parser. Strikethroughs are not part of the CommonMark standard
     // and we therefore must enable it explicitly.
     let mut options = md::Options::empty();
@@ -584,8 +592,12 @@ fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                 Event::Start(_) | Event::End(_) => {
                     panic!("illegal Event::{{Start, End}} in UnflattenedEvent::Event")
                 },
-                Event::Text(text) => text_spans.push(Inline::Text(text.to_string())),
-                Event::Code(code) => text_spans.push(Inline::Code(code.to_string())),
+                Event::Text(text) => {
+                    text_spans.push(Inline::Text(text.to_string()))
+                },
+                Event::Code(code) => {
+                    text_spans.push(Inline::Code(code.to_string()))
+                },
                 Event::SoftBreak => text_spans.push(Inline::SoftBreak),
                 Event::HardBreak => text_spans.push(Inline::HardBreak),
                 Event::Html(_) => todo!("error: unhandled inline HTML"),
@@ -609,7 +621,8 @@ fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         text_spans.push(Inline::Strong(unwrap_text(events)));
                     },
                     Tag::Strikethrough => {
-                        text_spans.push(Inline::Strikethrough(unwrap_text(events)));
+                        text_spans
+                            .push(Inline::Strikethrough(unwrap_text(events)));
                     },
 
                     Tag::Link {
@@ -640,7 +653,8 @@ fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         classes: _,
                         attrs: _,
                     } => {
-                        complete.push(Block::Heading(level, unwrap_text(events)));
+                        complete
+                            .push(Block::Heading(level, unwrap_text(events)));
                     },
                     // TODO(test):
                     //     Is this disappearance of the Paragraph tag correct?
@@ -655,7 +669,8 @@ fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                                 events: item_events,
                             } = event
                             {
-                                let item_blocks = ast_events_to_ast(item_events);
+                                let item_blocks =
+                                    ast_events_to_ast(item_events);
                                 items.push(ListItem(item_blocks));
                             } else {
                                 todo!("handle list element: {event:?}");
@@ -750,13 +765,19 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
         match event {
             UnflattenedEvent::Event(event) => match event {
                 Event::Start(_) | Event::End(_) => unreachable!(),
-                Event::Text(text) => text_spans.push(Inline::Text(text.to_string())),
-                Event::Code(code) => text_spans.push(Inline::Code(code.to_string())),
+                Event::Text(text) => {
+                    text_spans.push(Inline::Text(text.to_string()))
+                },
+                Event::Code(code) => {
+                    text_spans.push(Inline::Code(code.to_string()))
+                },
                 Event::SoftBreak => text_spans.push(Inline::SoftBreak),
                 Event::HardBreak => text_spans.push(Inline::HardBreak),
                 Event::Html(_) => todo!("error: skipping inline HTML"),
                 Event::InlineHtml(_) => todo!(),
-                Event::TaskListMarker(_) | Event::Rule | Event::FootnoteReference(_) => {
+                Event::TaskListMarker(_)
+                | Event::Rule
+                | Event::FootnoteReference(_) => {
                     todo!("handle: {event:?}")
                 },
                 Event::InlineMath(_) => todo!(),
@@ -954,7 +975,9 @@ fn block_to_events<'ast>(block: &'ast Block, events: &mut Vec<Event<'ast>>) {
                         //  clap-markdown NOT wrapped in paired
                         //  Start(Tag::Paragraph) / End(_) events.
                         match list_item_blocks.as_slice() {
-                            [Block::Paragraph(inlines)] if list_items.len() == 1 => {
+                            [Block::Paragraph(inlines)]
+                                if list_items.len() == 1 =>
+                            {
                                 inlines_to_events(inlines, events);
 
                                 // Return from inner closure.
@@ -1046,7 +1069,10 @@ fn wrap<'ast, F: FnOnce(&mut Vec<Event<'ast>>)>(
     events.push(Event::End(end));
 }
 
-fn inlines_to_events<'ast>(inlines: &'ast Inlines, events: &mut Vec<Event<'ast>>) {
+fn inlines_to_events<'ast>(
+    inlines: &'ast Inlines,
+    events: &mut Vec<Event<'ast>>,
+) {
     let Inlines(inlines) = inlines;
 
     for inline in inlines {
@@ -1054,9 +1080,11 @@ fn inlines_to_events<'ast>(inlines: &'ast Inlines, events: &mut Vec<Event<'ast>>
             Inline::Text(text) => {
                 events.push(Event::Text(CowStr::from(text.as_str())));
             },
-            Inline::Emphasis(inlines) => wrap(Tag::Emphasis, events, |events| {
-                inlines_to_events(inlines, events)
-            }),
+            Inline::Emphasis(inlines) => {
+                wrap(Tag::Emphasis, events, |events| {
+                    inlines_to_events(inlines, events)
+                })
+            },
             Inline::Strong(inlines) => wrap(Tag::Strong, events, |events| {
                 inlines_to_events(inlines, events)
             }),
@@ -1065,7 +1093,9 @@ fn inlines_to_events<'ast>(inlines: &'ast Inlines, events: &mut Vec<Event<'ast>>
                     inlines_to_events(inlines, events)
                 })
             },
-            Inline::Code(code) => events.push(Event::Code(CowStr::from(code.as_str()))),
+            Inline::Code(code) => {
+                events.push(Event::Code(CowStr::from(code.as_str())))
+            },
             Inline::Link {
                 link_type,
                 dest_url,
@@ -1218,10 +1248,14 @@ fn test_markdown_to_ast() {
             Inline::plain_text(" text."),
         ]),
         Block::List(vec![ListItem(vec![
-            Block::paragraph(vec![Inline::plain_text("With nested list items.")]),
+            Block::paragraph(vec![Inline::plain_text(
+                "With nested list items.",
+            )]),
             Block::List(vec![ListItem(vec![Block::paragraph(vec![
                 Inline::code("md2nb"),
-                Inline::plain_text(" supports nested lists up to three levels deep."),
+                Inline::plain_text(
+                    " supports nested lists up to three levels deep.",
+                ),
             ])])]),
         ])]),
     ])])];
@@ -1466,7 +1500,9 @@ fn test_ast_to_markdown() {
     // use pretty_assertions::assert_eq;
 
     assert_eq!(
-        ast_to_markdown(&[Block::paragraph(vec![Inline::Text("hello".into())])]),
+        ast_to_markdown(&[Block::paragraph(vec![Inline::Text(
+            "hello".into()
+        )])]),
         "hello"
     );
 
@@ -1488,7 +1524,8 @@ fn test_ast_to_markdown() {
 /// all round-trip when processed:
 #[test]
 fn test_md_documents_roundtrip() {
-    let kitchen_sink_md = include_str!("../../md2nb/docs/examples/kitchen-sink.md");
+    let kitchen_sink_md =
+        include_str!("../../md2nb/docs/examples/kitchen-sink.md");
 
     // FIXME:
     //  Fix the bugs requiring these hacky removals from kitchen-sink.md
