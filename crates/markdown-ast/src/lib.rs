@@ -192,6 +192,42 @@
 //!
 //! ```
 //!
+//! # Known Issues
+//!
+//! Currently `markdown-ast` does not escape Markdown content appearing in
+//! leaf inline text:
+//!
+//! ```
+//! use markdown_ast::{ast_to_markdown, Block};
+//!
+//! let ast = vec![
+//!     Block::plain_text_paragraph("In the equation a*b*c ...")
+//! ];
+//!
+//! let markdown = ast_to_markdown(&ast);
+//!
+//! assert_eq!(markdown, "In the equation a*b*c ...");
+//! ```
+//!
+//! which will render as:
+//!
+//! > In the equation a*b*c ...
+//!
+//! with the asterisks interpreted as emphasis formatting markers, contrary to
+//! the intention of the author.
+//!
+//! Fixing this robustly will require either:
+//!
+//! * Adding automatic escaping of Markdown characters in [`Inline::Text`]
+//!   during rendering (not ideal)
+//!
+//! * Adding pre-construction validation checks for [`Inline::Text`] that
+//!   prevent constructing an `Inline` with Markdown formatting characters that
+//!   have not been escaped correctly by the user.
+//!
+//! In either case, fixing this bug will be considered a **semver exempt**
+//! change in behavior to `markdown-ast`.
+//!
 //! # Motivation and relation to `pulldown-cmark`
 //!
 //! [`pulldown-cmark`](https://crates.io/crates/pulldown-cmark) is a popular
