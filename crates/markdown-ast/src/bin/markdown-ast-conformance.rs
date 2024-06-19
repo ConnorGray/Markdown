@@ -12,4 +12,9 @@ fn main() {
     // pulldown-cmark event stream was successfully converted into a sequence
     // of structured markdown_ast::Block's.
     let _ = markdown_to_ast(&content);
+
+    // TODO:
+    //  Test converting this back to a string and verify the orginal
+    //  matches the processed output. Currently
+    //  pulldown-cmark / pulldown-cmark-to-cmark do a lossy conversion.
 }
