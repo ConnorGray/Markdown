@@ -9,7 +9,7 @@
 //! The AST types are designed to align with the structure defined
 //! by the [CommonMark Specification](https://spec.commonmark.org/).
 //!
-//! ## Quick Examples
+//! # Quick Examples
 //!
 //! Parse simple Markdown into an AST:
 //!
@@ -32,7 +32,9 @@
 //! ]);
 //! ```
 //!
-//! ## API Overview
+//!
+//!
+//! # API Overview
 //!
 //! | Function                           | Input      | Output       |
 //! |------------------------------------|------------|--------------|
@@ -44,7 +46,7 @@
 //! | [`markdown_to_events()`]           | `&str`     | `Vec<Event>` |
 //! | [`canonicalize()`]                 | `&str`     | `String`     |
 //!
-//! ### Terminology
+//! ##### Terminology
 //!
 //! This crate is able to process and manipulate Markdown in three different
 //! representations:
@@ -55,7 +57,7 @@
 //! | Events   | `&[Event]`           | Markdown parsed by [`pulldown-cmark`](https://crates.io/crates/pulldown-cmark) into a flat sequence of parser [`Event`]s |
 //! | AST      | `Block` / `&[Block]` | Markdown parsed by `markdown-ast` into a hierarchical structure of [`Block`]s |
 //!
-//! ### Processing Steps
+//! ##### Processing Steps
 //!
 //! ```text
 //!     String => Events => Blocks => Events => String
@@ -77,9 +79,11 @@
 //! Note: **A** wraps [`pulldown_cmark::Parser`], and **D** wraps
 //! [`pulldown_cmark_to_cmark::cmark()`].
 //!
-//! ## Detailed Examples
 //!
-//! ##### Parse varied Markdown to an AST representation:
+//!
+//! # Detailed Examples
+//!
+//! #### Parse varied Markdown to an AST representation:
 //!
 //! ```
 //! use markdown_ast::{
@@ -122,7 +126,7 @@
 //! ]);
 //! ```
 //!
-//! ##### Synthesize Markdown using programmatic construction of the document:
+//! #### Synthesize Markdown using programmatic construction of the document:
 //!
 //! *Note:* This is a more user friendly alternative to a "string builder"
 //! approach where the raw Markdown string is constructed piece by piece,
@@ -188,7 +192,7 @@
 //!
 //! ```
 //!
-//! ### Motivation and relation to `pulldown-cmark`
+//! # Motivation and relation to `pulldown-cmark`
 //!
 //! [`pulldown-cmark`](https://crates.io/crates/pulldown-cmark) is a popular
 //! Markdown parser crate. It provides a streaming event (pull parsing) based
@@ -280,7 +284,7 @@ pub struct Inlines(pub Vec<Inline>);
 #[derive(Debug, Clone, PartialEq)]
 pub struct ListItem(pub Vec<Block>);
 
-/// An inline piece of Markdown content.
+/// An inline piece of atomic Markdown content.
 /// (CommonMark: [inlines](https://spec.commonmark.org/0.30/#inlines))
 #[derive(Debug, Clone, PartialEq)]
 pub enum Inline {
