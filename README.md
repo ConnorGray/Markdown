@@ -1,5 +1,9 @@
 # Markdown
 
+[![Crates.io](https://img.shields.io/crates/v/markdown-ast.svg)](https://crates.io/crates/markdown-ast)
+![License](https://img.shields.io/crates/l/markdown-ast.svg)
+[![Documentation](https://docs.rs/markdown-ast/badge.svg)](https://docs.rs/markdown-ast)
+
 #### [API Documentation](https://docs.rs/markdown-ast) | [Changelog](./docs/CHANGELOG-markdown-ast.md) | [Contributing](#contributing)
 
 This repository contains two projects for working with Markdown
