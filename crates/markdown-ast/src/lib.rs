@@ -42,6 +42,7 @@
 //! | [`events_to_ast()`]                | `&[Event]` | `Vec<Block>` |
 //! | [`events_to_markdown()`]           | `&[Event]` | `String`     |
 //! | [`markdown_to_events()`]           | `&str`     | `Vec<Event>` |
+//! | [`canonicalize()`]                 | `&str`     | `String`     |
 //!
 //! ### Terminology
 //!
@@ -62,6 +63,7 @@
 //!               |______ B _____|    |______ D _____|
 //!     |__________ E ___________|
 //!                         |___________ F __________|
+//!     |____________________ G _____________________|
 //! ```
 //!
 //! - **A** — [`markdown_to_events()`]
@@ -70,6 +72,7 @@
 //! - **D** — [`events_to_markdown()`]
 //! - **E** — [`markdown_to_ast()`]
 //! - **F** — [`ast_to_markdown()`]
+//! - **G** — [`canonicalize()`]
 //!
 //! Note: **A** wraps [`pulldown_cmark::Parser`], and **D** wraps
 //! [`pulldown_cmark_to_cmark::cmark()`].
@@ -336,6 +339,56 @@ pub fn markdown_to_events<'i>(input: &'i str) -> impl Iterator<Item = Event<'i>>
     options.insert(md::Options::ENABLE_STRIKETHROUGH);
     options.insert(md::Options::ENABLE_TABLES);
     md::Parser::new_ext(input, options)
+}
+
+/// Canonicalize (or format) a Markdown input by parsing and then converting
+/// back to a string.
+///
+/// **⚠️ Warning ⚠️:** This function is **semver exempt**. The precise
+/// canonicalization behavior may change in MINOR or PATCH versions of
+/// markdown-ast. (Stabilizing the behavior of this function will require
+/// additional options to configure the behavior of
+/// [pulldown-cmark-to-cmark](https://crates.io/crates/pulldown-cmark-to-cmark).)
+///
+/// # Examples
+///
+/// List items using `-` (minus) are canonicalized to the `*` (asterisk) list
+/// marker type:
+///
+/// ```
+/// use markdown_ast::canonicalize;
+/// assert_eq!(
+/// canonicalize("\
+/// - Foo
+/// - Bar
+/// "),
+/// "\
+/// * Foo
+///
+/// * Bar"
+/// )
+/// ```
+///
+/// Hard breaks ending in backslash are canonicalized to the "two spaces at the
+/// end of the line" form:
+///
+/// ```
+/// use markdown_ast::canonicalize;
+/// assert_eq!(
+/// canonicalize(r#"
+/// This ends in a hard break.\
+/// This is a new line."#),
+/// // Note: The two spaces at the end of the first line below may not be
+/// //       visible, but they're there.
+/// "\
+/// This ends in a hard break.  
+/// This is a new line."
+/// )
+/// ```
+pub fn canonicalize(input: &str) -> String {
+    let ast = markdown_to_ast(input);
+
+    return ast_to_markdown(&ast);
 }
 
 fn default_to_markdown_options() -> pulldown_cmark_to_cmark::Options<'static> {
