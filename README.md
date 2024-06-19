@@ -37,14 +37,14 @@ assert_eq!(ast, vec![
 * [`./crates/markdown-ast`](./crates/markdown-ast/): source code for the
   general-purpose `markdown-ast` crate.
 
+* [`./paclets/Markdown/`](./Markdown/): source code for the
+  `ConnorGray/Markdown` paclet.
+
 * [`./crates/md2nb/`](./crates/md2nb): source code for the
   [`md2nb`](https://crates.io/crates/md2nb) command-line utility.
 
 * [`./crates/wolfram-markdown-link`](./crates/wolfram-markdown-link/): source
   code for the LibraryLink library used by the Markdown paclet.
-
-* [`./paclets/Markdown/`](./Markdown/): source code for the
-  `ConnorGray/Markdown` paclet.
 
 * [`third-party/commonmark-spec/`](./third-party/): git submodule of the
   [commonmark-spec](https://github.com/commonmark/commonmark-spec/) repository.
