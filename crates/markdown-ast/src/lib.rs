@@ -1,9 +1,38 @@
 //! Parse a Markdown input string into a sequence of Markdown abstract syntax
 //! tree [`Block`]s.
 //!
-//! This module compensates for the fact that the `pulldown-cmark` crate is
-//! focused on efficient incremental output (pull parsing), and consequently
-//! doesn't provide it's own AST types.
+//! This crate is intentionally designed to interoperate well with the
+//! [`pulldown-cmark`](https://crates.io/crate/pulldown-cmark) crate and the
+//! ecosystem around it. See [Motivation and relation to pulldown-cmark](#motivation-and-relation-to-pulldown-cmark)
+//! for more information.
+//!
+//! The AST types are designed to align with the structure defined
+//! by the [CommonMark Specification](https://spec.commonmark.org/).
+//!
+//! ## Quick Examples
+//!
+//! Parse simple Markdown into an AST:
+//!
+//! ```
+//! use markdown_ast::{markdown_to_ast, Block, Inline, Inlines};
+//! # use pretty_assertions::assert_eq;
+//!
+//! let ast = markdown_to_ast("
+//! Hello! This is a paragraph **with bold text**.
+//! ");
+//!
+//! assert_eq!(ast, vec![
+//!     Block::Paragraph(Inlines(vec![
+//!         Inline::Text("Hello! This is a paragraph ".to_owned()),
+//!         Inline::Strong(Inlines(vec![
+//!             Inline::Text("with bold text".to_owned()),
+//!         ])),
+//!         Inline::Text(".".to_owned())
+//!     ]))
+//! ]);
+//! ```
+//!
+//! ## API Overview
 //!
 //! | Function                           | Input      | Output       |
 //! |------------------------------------|------------|--------------|
@@ -16,13 +45,16 @@
 //!
 //! ### Terminology
 //!
-//! | Term     | Type                 | Description                |
-//! |----------|----------------------|----------------------------|
-//! | Markdown | `String`             | Raw Markdown source string |
+//! This crate is able to process and manipulate Markdown in three different
+//! representations:
+//!
+//! | Term     | Type                 | Description                         |
+//! |----------|----------------------|-------------------------------------|
+//! | Markdown | `String`             | Raw Markdown source / output string |
 //! | Events   | `&[Event]`           | Markdown parsed by [`pulldown-cmark`](https://crates.io/crates/pulldown-cmark) into a flat sequence of parser [`Event`]s |
 //! | AST      | `Block` / `&[Block]` | Markdown parsed by `markdown-ast` into a hierarchical structure of [`Block`]s |
 //!
-//! ### Processing
+//! ### Processing Steps
 //!
 //! ```text
 //!     String => Events => Blocks => Events => String
@@ -32,12 +64,81 @@
 //!                         |___________ F __________|
 //! ```
 //!
-//! - **A** — [`markdown_to_events()`] (wraps [`pulldown_cmark::Parser`])
+//! - **A** — [`markdown_to_events()`]
 //! - **B** — [`events_to_ast()`]
 //! - **C** — [`ast_to_events()`]
-//! - **D** — [`events_to_markdown()`] (wraps [`pulldown_cmark_to_cmark::cmark()`])
+//! - **D** — [`events_to_markdown()`]
 //! - **E** — [`markdown_to_ast()`]
 //! - **F** — [`ast_to_markdown()`]
+//!
+//! Note: **A** wraps [`pulldown_cmark::Parser`], and **D** wraps
+//! [`pulldown_cmark_to_cmark::cmark()`].
+//!
+//! ## Detailed Examples
+//!
+//! Parse varied Markdown to an AST representation:
+//!
+//! ```
+//! use markdown_ast::{
+//!     markdown_to_ast, Block, HeadingLevel, Inline, Inlines, ListItem
+//! };
+//! # use pretty_assertions::assert_eq;
+//!
+//! let ast = markdown_to_ast("
+//! ## An Example Document
+//!
+//! This is a paragraph that
+//! is split across *multiple* lines.
+//!
+//! * This is a list item
+//! ");
+//!
+//! assert_eq!(ast, vec![
+//!     Block::Heading(
+//!         HeadingLevel::H1,
+//!         Inlines(vec![
+//!              Inline::Text("An Example Document".to_owned())
+//!         ])
+//!     ),
+//!     Block::Paragraph(Inlines(vec![
+//!         Inline::Text("This is a paragraph that".to_owned()),
+//!         Inline::SoftBreak,
+//!         Inline::Text("is split across ".to_owned()),
+//!         Inline::Emphasis(Inlines(vec![
+//!             Inline::Text("multiple".to_owned()),
+//!         ])),
+//!         Inline::Text(" lines.".to_owned()),
+//!     ])),
+//!     Block::List(vec![
+//!         ListItem(vec![
+//!             Block::Paragraph(Inlines(vec![
+//!                 Inline::Text("This is a list item".to_owned())
+//!             ]))
+//!         ])
+//!     ])
+//! ]);
+//! ```
+//!
+//! ### Motivation and relation to `pulldown-cmark`
+//!
+//! [`pulldown-cmark`](https://crates.io/crates/pulldown-cmark) is a popular
+//! Markdown parser crate. It provides a streaming event (pull parsing) based
+//! representation of a Markdown document. That representation is useful for
+//! efficient transformation of a Markdown document into another format, often
+//! HTML.
+//!
+//! However, a streaming parser representation is less amenable to programmatic
+//! construction or human-understandable transformations of Markdown documents.
+//!
+//! `markdown-ast` provides a abstract syntax tree (AST) representation of
+//! Markdown that is easy to construct and work with.
+//!
+//! Additionally, `pulldown-cmark` is widely used in the Rust crate ecosystem,
+//! for example for [`mdbook`](https://crates.io/crates/mdbook) extensions.
+//! Interoperability with `pulldown-cmark` is an intentional design choice for
+//! the usability of `markdown-ast`; one could imagine `markdown-ast` instead
+//! abstracting over the underlying parser implementation, but my view is that
+//! would limit the utility of `markdown-ast`.
 //!
 
 mod unflatten;
@@ -56,17 +157,19 @@ pub use pulldown_cmark::HeadingLevel;
 //======================================
 
 /// A piece of structural Markdown content.
-///
-/// *CommonMark Spec:* [blocks](https://spec.commonmark.org/0.30/#blocks),
-/// [container blocks](https://spec.commonmark.org/0.30/#container-blocks)
+/// (CommonMark: [blocks](https://spec.commonmark.org/0.30/#blocks),
+/// [container blocks](https://spec.commonmark.org/0.30/#container-blocks))
 #[derive(Debug, Clone, PartialEq)]
 pub enum Block {
+    /// CommonMark: [paragraphs](https://spec.commonmark.org/0.30/#paragraphs)
     Paragraph(Inlines),
+    /// CommonMark: [lists](https://spec.commonmark.org/0.30/#lists)
     List(Vec<ListItem>),
+    /// CommonMark: [ATX heading](https://spec.commonmark.org/0.30/#atx-heading)
     Heading(HeadingLevel, Inlines),
     /// An indented or fenced code block.
     ///
-    /// *CommonMark Spec:* [indented code blocks](https://spec.commonmark.org/0.30/#indented-code-blocks),
+    /// CommonMark: [indented code blocks](https://spec.commonmark.org/0.30/#indented-code-blocks),
     /// [fenced code blocks](https://spec.commonmark.org/0.30/#fenced-code-blocks)
     CodeBlock {
         /// Indicates whether this is a fenced or indented code block.
@@ -74,11 +177,11 @@ pub enum Block {
         /// If this `CodeBlock` is a fenced code block, this contains its info
         /// string.
         ///
-        /// *CommonMark Spec:* [info string](https://spec.commonmark.org/0.30/#info-string)
+        /// CommonMark: [info string](https://spec.commonmark.org/0.30/#info-string)
         kind: CodeBlockKind,
         code: String,
     },
-    /// *CommonMark Spec:* [block quotes](https://spec.commonmark.org/0.30/#block-quotes)
+    /// CommonMark: [block quotes](https://spec.commonmark.org/0.30/#block-quotes)
     BlockQuote {
         // TODO: Document
         kind: Option<md::BlockQuoteKind>,
@@ -89,38 +192,50 @@ pub enum Block {
         headers: Vec<Inlines>,
         rows: Vec<Vec<Inlines>>,
     },
-    /// *CommonMark Spec:* [thematic breaks](https://spec.commonmark.org/0.30/#thematic-breaks)
+    /// CommonMark: [thematic breaks](https://spec.commonmark.org/0.30/#thematic-breaks)
     Rule,
 }
 
 /// A sequence of [`Inline`]s.
+/// (CommonMark: [inlines](https://spec.commonmark.org/0.30/#inlines))
 #[derive(Debug, Clone, PartialEq)]
 pub struct Inlines(pub Vec<Inline>);
 
+/// An item in a list. (CommonMark: [list items](https://spec.commonmark.org/0.30/#list-items))
 #[derive(Debug, Clone, PartialEq)]
 pub struct ListItem(pub Vec<Block>);
 
 /// An inline piece of Markdown content.
-///
-/// *CommonMark Spec:* [inlines](https://spec.commonmark.org/0.30/#inlines)
+/// (CommonMark: [inlines](https://spec.commonmark.org/0.30/#inlines))
 #[derive(Debug, Clone, PartialEq)]
 pub enum Inline {
     Text(String),
+    /// CommonMark: [emphasis](https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis)
     Emphasis(Inlines),
+    /// CommonMark: [strong emphasis](https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis)
     Strong(Inlines),
+    /// Strikethrough styled text. (Non-standard.)
     Strikethrough(Inlines),
+    /// CommonMark: [code spans](https://spec.commonmark.org/0.30/#code-spans)
     Code(String),
+    /// CommonMark: [links](https://spec.commonmark.org/0.30/#links)
     // TODO:
     //  Document every type of Inline::Link value and what its equivalent source
     //  is.
     Link {
         link_type: md::LinkType,
+        /// CommonMark: [link destination](https://spec.commonmark.org/0.30/#link-destination)
         dest_url: String,
+        /// CommonMark: [link title](https://spec.commonmark.org/0.30/#link-title)
         title: String,
+        /// CommonMark: [link label](https://spec.commonmark.org/0.30/#link-label)
         id: String,
+        /// CommonMark: [link text](https://spec.commonmark.org/0.30/#link-text)
         content_text: Inlines,
     },
+    /// CommonMark: [soft line breaks](https://spec.commonmark.org/0.30/#soft-line-breaks)
     SoftBreak,
+    /// CommonMark: [hard line breaks](https://spec.commonmark.org/0.30/#hard-line-breaks)
     HardBreak,
 }
 
@@ -172,7 +287,9 @@ pub fn ast_to_markdown(blocks: &[Block]) -> String {
 
 /// Convert [`Event`]s into a Markdown string.
 ///
-/// This is a thin wrapper around [`pulldown_cmark_to_cmark::cmark_with_options`].
+/// This is a thin wrapper around
+/// [`pulldown_cmark_to_cmark::cmark_with_options`], provided in this crate for
+/// consistency and ease of use.
 pub fn events_to_markdown<'e, I: IntoIterator<Item = Event<'e>>>(events: I) -> String {
     let mut string = String::new();
 
@@ -209,6 +326,9 @@ pub fn events_to_ast<'i, I: IntoIterator<Item = Event<'i>>>(events: I) -> Vec<Bl
 }
 
 /// Parse Markdown input string into [`Event`]s.
+///
+/// This is a thin wrapper around [`pulldown_cmark::Parser`], provided in this
+/// crate for consistency and ease of use.
 pub fn markdown_to_events<'i>(input: &'i str) -> impl Iterator<Item = Event<'i>> {
     // Set up options and parser. Strikethroughs are not part of the CommonMark standard
     // and we therefore must enable it explicitly.
