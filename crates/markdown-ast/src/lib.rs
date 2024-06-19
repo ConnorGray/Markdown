@@ -256,11 +256,10 @@ mod from_events;
 mod to_events;
 
 /// Ensure that doc tests in the README.md file get run.
+///
 /// See: <https://connorgray.com/reference/creating-a-new-rust-crate#test-readmemd-examples>
-#[cfg(any(doc, doctest))]
-#[doc(hidden)]
 mod test_readme {
-    #![doc = include_str!("../../../README.md")]
+    #![doc = include_str!("../README.md")]
 }
 
 use pulldown_cmark::{self as md, CowStr, Event};
