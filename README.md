@@ -1,5 +1,7 @@
 # Markdown
 
+#### [API Documentation](https://docs.rs/markdown-ast) | [Changelog](./docs/CHANGELOG-markdown-ast.md) | [Contributing](#contributing)
+
 This repository contains two projects for working with Markdown
 documents:
 
