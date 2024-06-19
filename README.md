@@ -1,6 +1,36 @@
-# Markdown for Wolfram
+# Markdown
 
-This repository contains code and tools for processing Markdown from Wolfram.
+This repository contains two projects for working with Markdown
+documents:
+
+* `markdown-ast` — a Rust crate modeling Markdown
+  syntax as an AST.
+
+* `ConnorGray/Markdown` — a Wolfram paclet providing a
+  symbolic representation of Markdown elements, and (**TODO**) notebook frontend
+  support for opening and editing .md files.
+
+## Quick Examples
+
+Parse a Markdown document into an AST in Rust:
+
+```rust
+use markdown_ast::{markdown_to_ast, Block, Inline, Inlines};
+
+let ast = markdown_to_ast("
+Hello! This is a paragraph **with bold text**.
+");
+
+assert_eq!(ast, vec![
+    Block::Paragraph(Inlines(vec![
+        Inline::Text("Hello! This is a paragraph ".to_owned()),
+        Inline::Strong(Inlines(vec![
+            Inline::Text("with bold text".to_owned()),
+        ])),
+        Inline::Text(".".to_owned())
+    ]))
+]);
+```
 
 ## File Overview
 

@@ -146,6 +146,12 @@
 
 mod unflatten;
 
+/// Ensure that doc tests in the README.md file get run.
+/// See: https://connorgray.com/reference/creating-a-new-rust-crate#test-readmemd-examples
+#[doc(hidden)]
+mod test_readme {
+    #![doc = include_str!("../../../README.md")]
+}
 
 use std::mem;
 
