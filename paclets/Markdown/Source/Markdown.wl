@@ -1,12 +1,23 @@
 BeginPackage["ConnorGray`Markdown`"]
 
+(*------------------------------------*)
+(* Symbolic Markdown                  *)
+(*------------------------------------*)
+
 MarkdownElement
 
-MarkdownParse
+(*------------------------------------*)
+(* Operations on Markdown             *)
+(*------------------------------------*)
 
+MarkdownParse
 ToMarkdownString
 
-ConvertToMarkdown
+(*------------------------------------*)
+(* Markdown <=> Notebook Conversion   *)
+(*------------------------------------*)
+
+ConvertToMarkdownElement
 
 MarkdownError
 

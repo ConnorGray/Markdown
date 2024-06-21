@@ -19,9 +19,9 @@ CreateMarkdownNotebook[markdown0_?StringQ] := Module[{
 
 (*========================================================*)
 
-SetFallthroughError[ConvertToMarkdown]
+SetFallthroughError[ConvertToMarkdownElement]
 
-ConvertToMarkdown[obj_] := Module[{},
+ConvertToMarkdownElement[obj_] := Module[{},
 	ConfirmReplace[obj, {
 		(*==================*)
 		(* FrontEnd Objects *)
@@ -29,15 +29,15 @@ ConvertToMarkdown[obj_] := Module[{},
 
 		(* TODO: Add tests for each of these cases. *)
 
-		_NotebookObject :> ConvertToMarkdown[NotebookGet[obj]],
+		_NotebookObject :> ConvertToMarkdownElement[NotebookGet[obj]],
 
-		_CellObject :> ConvertToMarkdown[NotebookGet[obj]],
+		_CellObject :> ConvertToMarkdownElement[NotebookGet[obj]],
 
 		(*======================*)
 		(* Notebook Expressions *)
 		(*======================*)
 
-		Notebook[cells_List, options___?OptionQ] :> Map[ConvertToMarkdown, cells],
+		Notebook[cells_List, options___?OptionQ] :> Map[ConvertToMarkdownElement, cells],
 
 		cell_Cell :> convertToMarkdown[cell],
 

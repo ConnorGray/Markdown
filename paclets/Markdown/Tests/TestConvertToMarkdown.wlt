@@ -1,7 +1,7 @@
 Needs["ConnorGray`Markdown`"]
 
 VerificationTest[
-	ConvertToMarkdown @ Notebook[{
+	ConvertToMarkdownElement @ Notebook[{
 		Cell["Hello Markdown!", "Title"],
 
 		Cell["This is a Section", "Section"],
@@ -22,7 +22,7 @@ VerificationTest[
 ]
 
 VerificationTest[
-	ConvertToMarkdown @ Notebook[{
+	ConvertToMarkdownElement @ Notebook[{
 		Cell["This is a code block:", "Text"],
 		Cell["println!(\"Hello, World!\");", "Program"]
 	}],
