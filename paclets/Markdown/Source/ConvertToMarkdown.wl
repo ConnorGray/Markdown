@@ -10,6 +10,19 @@ Needs["ConnorGray`Markdown`"]
 
 SetFallthroughError[CreateMarkdownNotebook]
 
+CreateMarkdownNotebook[] := Module[{
+
+},
+	NotebookPut @ Notebook[
+		{},
+		StyleDefinitions -> FrontEnd`FileName[
+			{"ConnorGray"},
+			"Markdown.nb",
+			CharacterEncoding -> "UTF-8"
+		]
+	]
+]
+
 CreateMarkdownNotebook[markdown0_?StringQ] := Module[{
 	markdown = MarkdownParse[markdown0]
 },

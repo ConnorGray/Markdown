@@ -1,0 +1,42 @@
+Notebook[{
+	(* Inherit from Default.nb *)
+	Cell[StyleData[StyleDefinitions -> "Default.nb"]],
+
+	Cell[StyleData["Notebook"],
+		DefaultNewCellStyle -> "Text"
+	],
+
+	(*================================*)
+	(* Overwrite built-in styles      *)
+	(*================================*)
+
+	(* Indicate that Output cells are not saved by default *)
+	Cell[StyleData["Output"],
+		CellFrame -> True,
+		CellFrameStyle -> {
+			Directive[GrayLevel[0, 0]],
+			Directive[GrayLevel[0.75], Thickness[3], Dashing[{3, 4}]],
+			Directive[GrayLevel[0, 0]],
+			Directive[GrayLevel[0, 0]]
+		}
+	],
+
+	Cell[StyleData["Text"],
+		StyleKeyMapping -> {
+			">" -> "ConnorGray/MarkdownBlockquote",
+			"*" -> "Item"
+		}
+	],
+
+	(*================================*)
+	(* New Styles                     *)
+	(*================================*)
+
+	Cell[
+		StyleData[
+			"ConnorGray/MarkdownBlockquote",
+			StyleDefinitions -> StyleData["Text"]
+		],
+		Background -> GrayLevel[0.9]
+	]
+}]

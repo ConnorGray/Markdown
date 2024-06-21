@@ -17,6 +17,7 @@ ToMarkdownString
 (* Markdown <=> Notebook Conversion   *)
 (*------------------------------------*)
 
+CreateMarkdownNotebook
 ConvertToMarkdownElement
 
 MarkdownError
