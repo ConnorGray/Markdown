@@ -35,3 +35,15 @@ VerificationTest[
 
 This is some text."
 ]
+
+VerificationTest[
+	ToMarkdownString @ {
+		MarkdownElement["CodeBlock", "rust", "fn foo() -> i64 {\n    return 4;\n}"]
+	},
+	"
+```rust
+fn foo() -> i64 {
+    return 4;
+}
+```"
+]

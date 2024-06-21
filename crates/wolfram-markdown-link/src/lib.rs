@@ -2,10 +2,12 @@ mod from_expr_utils;
 
 use wolfram_library_link::{
     export,
-    expr::{Expr, Number, Symbol},
+    expr::{Expr, ExprKind, Number, Symbol},
 };
 
-use markdown_ast::{Block, HeadingLevel, Inline, Inlines, ListItem};
+use markdown_ast::{
+    Block, CodeBlockKind, HeadingLevel, Inline, Inlines, ListItem,
+};
 
 use self::from_expr_utils::try_headed;
 
@@ -238,6 +240,25 @@ fn parse_expr_to_block(expr: &Expr) -> Result<Block, String> {
             let inlines = parse_expr_inlines(inlines)?;
 
             Block::Heading(level, inlines)
+        },
+        ("CodeBlock", [kind, content]) => {
+            let kind = match kind.kind() {
+                ExprKind::Symbol(sym) if sym.as_str() == "System`None" => CodeBlockKind::Indented,
+                ExprKind::String(fence) => CodeBlockKind::Fenced(fence.clone()) ,
+                ExprKind::Symbol(_) |
+                ExprKind::Integer(_) |
+                ExprKind::Real(_)  |
+                ExprKind::Normal(_) => return Err(format!("expected \"CodeBlock\" element 2nd argument to be a string or None, got: {kind}")),
+            };
+
+            let Some(content) = content.try_as_str() else {
+                return Err(format!("expected \"CodeBlock\" element 3rd argument to be a string, got: {content}"));
+            };
+
+            Block::CodeBlock {
+                kind,
+                code: content.to_owned(),
+            }
         },
         (other, _) => {
             panic!("unrecognized block MarkdownElement[{other:?}, ..] kind")
