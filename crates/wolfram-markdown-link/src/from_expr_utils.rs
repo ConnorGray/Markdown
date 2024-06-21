@@ -3,7 +3,12 @@ use wolfram_library_link::expr::{Expr, Symbol};
 pub(crate) fn try_headed(e: &Expr, head: Symbol) -> Result<&[Expr], String> {
     let e = match e.try_as_normal() {
         Some(value) => value,
-        None => return Err(format!("expected {}[..]", head.symbol_name())),
+        None => {
+            return Err(format!(
+                "expected {}[..], got: {e}",
+                head.symbol_name()
+            ))
+        },
     };
 
     if !e.has_head(&head) {

@@ -303,6 +303,11 @@ fn parse_expr_to_inline(expr: &Expr) -> Result<Inline, String> {
 
             Inline::Strong(inlines)
         },
+        ("Emphasis", [inlines]) => {
+            let inlines = parse_expr_inlines(inlines)?;
+
+            Inline::Emphasis(inlines)
+        },
         (other, _) => {
             panic!("unrecognized inline MarkdownElement[{other:?}, ..] form")
         },

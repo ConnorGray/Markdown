@@ -47,3 +47,37 @@ fn foo() -> i64 {
 }
 ```"
 ]
+
+VerificationTest[
+	ToMarkdownString @ {
+		MarkdownElement[
+			"Heading",
+			1,
+			{MarkdownElement["Text", "Example Document"]}
+		],
+		MarkdownElement["Paragraph",{
+			MarkdownElement["Text", "This is some text"]
+		}],
+		MarkdownElement["CodeBlock", "wolfram,cell:Input", "foo[x_] := x + 1"],
+		MarkdownElement["Paragraph", {
+			MarkdownElement["Text", "This is "],
+			MarkdownElement["Strong", {MarkdownElement["Text", "some "]}],
+			MarkdownElement[
+				"Emphasis",
+				{MarkdownElement["Strong", {MarkdownElement["Text", "styled"]}]}
+			],
+			MarkdownElement["Strong", {MarkdownElement["Text", " text"]}],
+			MarkdownElement["Text", "."]
+		}]
+	},
+	"\
+# Example Document
+
+This is some text
+
+```wolfram,cell:Input
+foo[x_] := x + 1
+```
+
+This is **some *****styled***** text**."
+]

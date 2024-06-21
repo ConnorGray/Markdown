@@ -5,6 +5,7 @@ Begin["`Private`"]
 Needs["Wolfram`ErrorTools`"]
 
 Needs["ConnorGray`Markdown`"]
+Needs["ConnorGray`Markdown`Utils`"]
 
 (*========================================================*)
 
@@ -64,7 +65,10 @@ ConvertToMarkdownElement[obj_] := Module[{},
 
 (*====================================*)
 
-$trivialCellOpts = OrderlessPatternSequence[]
+$trivialCellOpts = OrderlessPatternSequence[
+	RepeatedNull[CellChangeTimes -> _, 1],
+	RepeatedNull[CellLabel -> _, 1]
+];
 
 SetFallthroughError[convertToMarkdown]
 
@@ -95,6 +99,14 @@ convertToMarkdown[expr0_] := ConfirmReplace[expr0, {
 		MarkdownElement["CodeBlock", None, cdata]
 	),
 
+	cell:Cell[_, "Input", $trivialCellOpts] :> Module[{
+		inputCode
+	},
+		inputCode = RaiseConfirm @ NotebookImportCell[cell, "InputText"];
+
+		MarkdownElement["CodeBlock", "wolfram,cell:Input", inputCode]
+	],
+
 	cell_Cell :> (
 		Raise[
 			MarkdownError,
@@ -107,11 +119,25 @@ convertToMarkdown[expr0_] := ConfirmReplace[expr0, {
 	(* Box Data                       *)
 	(*================================*)
 
+	TextData[contents_?ListQ] :> (
+		(* FIXME:
+			Should not always be a single paragraph if `contents` contains
+			consecutive internal newlines or other formatting constructs.
+		*)
+		Splice @ Map[convertToMarkdown, contents]
+	),
+
 	StyleBox[expr1_, styles___?OptionQ] :> Module[{
 		expr
 	},
 		expr = Fold[
 			{expr2, style} |-> ConfirmReplace[style, {
+				HoldPattern[FontWeight -> "Bold"] :> (
+					MarkdownElement["Strong", {expr2}]
+				),
+				HoldPattern[FontSlant -> "Italic"] :> (
+					MarkdownElement["Emphasis", {expr2}]
+				),
 				HoldPattern[lhs_ -> rhs_] :> (
 					Raise[
 						MarkdownError,
@@ -126,7 +152,7 @@ convertToMarkdown[expr0_] := ConfirmReplace[expr0, {
 					InputForm[other]
 				]
 			}],
-			expr1,
+			convertToMarkdown[expr1],
 			{styles}
 		];
 
