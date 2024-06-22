@@ -34,7 +34,6 @@ Needs["Wolfram`ErrorTools`"]
 
 Needs["ConnorGray`Markdown`Library`"]
 Needs["ConnorGray`Markdown`ConvertToMarkdown`"]
-Needs["ConnorGray`Markdown`ToMarkdownString`"]
 
 CreateErrorType[MarkdownError, {}]
 
@@ -47,6 +46,23 @@ MarkdownParse[s_?StringQ] := Module[{result},
 	result = $LibraryFunctions["parse_markdown"][s];
 
 	result
+]
+
+(*========================================================*)
+
+SetFallthroughError[ToMarkdownString]
+
+ToMarkdownString[
+	markdown0 : _MarkdownElement | {___MarkdownElement},
+	indent : _?IntegerQ : 0
+] := WrapRaised[
+	MarkdownError,
+	"Error in ToMarkdownString for ``",
+	InputForm[markdown0]
+] @ Module[{
+	markdown = Replace[markdown0, m:Except[_?ListQ] :> {m}]
+},
+	$LibraryFunctions["markdown_ast_to_markdown"][markdown]
 ]
 
 (*========================================================*)
