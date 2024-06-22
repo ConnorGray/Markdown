@@ -19,6 +19,7 @@ ToMarkdownString
 
 CreateMarkdownNotebook
 ConvertToMarkdownElement
+MarkdownToNotebook
 
 MarkdownError
 
@@ -34,6 +35,7 @@ Needs["Wolfram`ErrorTools`"]
 
 Needs["ConnorGray`Markdown`Library`"]
 Needs["ConnorGray`Markdown`ConvertToMarkdown`"]
+Needs["ConnorGray`Markdown`MarkdownToNotebook`"]
 
 CreateErrorType[MarkdownError, {}]
 
@@ -72,14 +74,7 @@ SetFallthroughError[CreateMarkdownNotebook]
 CreateMarkdownNotebook[] := Module[{
 
 },
-	NotebookPut @ Notebook[
-		{},
-		StyleDefinitions -> FrontEnd`FileName[
-			{"ConnorGray"},
-			"Markdown.nb",
-			CharacterEncoding -> "UTF-8"
-		]
-	]
+	NotebookPut @ MarkdownToNotebook[{}]
 ]
 
 CreateMarkdownNotebook[markdown0_?StringQ] := Module[{
@@ -88,8 +83,7 @@ CreateMarkdownNotebook[markdown0_?StringQ] := Module[{
 	(* TODO: Improve error handling, if this can even error *)
 	RaiseAssert[MatchQ[markdown, {___MarkdownElement}]];
 
-	(* FIXME: Does not exist yet. *)
-	(* MarkdownToNotebook[markdown] *)
+	MarkdownToNotebook[markdown]
 ]
 
 (*========================================================*)
