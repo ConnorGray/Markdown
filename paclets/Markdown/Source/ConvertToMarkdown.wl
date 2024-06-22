@@ -72,9 +72,39 @@ $trivialCellOpts = OrderlessPatternSequence[
 
 SetFallthroughError[convertToMarkdown]
 
+(*
+	ConvertToMarkdown[expr] converts a Notebook, Cell, or box expression into
+	Markdown.
+
+	The returned Markdown expression will always be in one of the following
+	forms:
+
+	* MarkdownElement[...]
+	* Splice[{___MarkdownElement}]
+	* Nothing
+*)
 convertToMarkdown[expr0_] := ConfirmReplace[expr0, {
 	(* FIXME: I'm sure this isn't correct in all cases. *)
 	text_?StringQ :> MarkdownElement["Text", text],
+
+	(*================================*)
+	(* Cell Groups                    *)
+	(*================================*)
+
+	Cell @ CellGroupData[{
+		inputCell:Cell[_, "Input", ___],
+		outputCell:Cell[_, "Output", ___]
+	}, Open | Closed] :> (
+		Splice @ Map[convertToMarkdown, {inputCell, outputCell}]
+	),
+
+	cell:Cell[_CellGroupData] :> (
+		Raise[
+			MarkdownError,
+			<| "CellGroup" -> cell |>
+			"Cell group with unrecognized structure cannot be converted to Markdown"
+		]
+	),
 
 	(*================================*)
 	(* Known Cell Styles              *)
@@ -106,6 +136,21 @@ convertToMarkdown[expr0_] := ConfirmReplace[expr0, {
 
 		MarkdownElement["CodeBlock", "wolfram,cell:Input", inputCode]
 	],
+
+	Cell[_, "Output", $trivialCellOpts] :> Nothing,
+
+	(*--------------------------------*)
+	(* Unrecognized cells             *)
+	(*--------------------------------*)
+
+	cell:Cell[_, style_?StringQ, ___] :> (
+		Raise[
+			MarkdownError,
+			<| "Cell" -> cell |>,
+			"Cell with unrecognized style `` or form cannot be converted to Markdown.",
+			InputForm[style]
+		]
+	),
 
 	cell_Cell :> (
 		Raise[

@@ -105,3 +105,28 @@ VerificationTest[
 	],
 	MarkdownElement["CodeBlock", "wolfram,cell:Input", "foo[x_] := x + 1"]
 ]
+
+(*====================================*)
+(* Conversion of Cell Groups          *)
+(*====================================*)
+
+(* Test that Output cells are not included in the built Markdown *)
+VerificationTest[
+	ConvertToMarkdownElement @ Cell @ CellGroupData[{
+		Cell[
+			BoxData[RowBox[{"2", "+", "2"}]],
+			"Input",
+			CellChangeTimes->{{3.9280632136375113`*^9, 3.928063216154937*^9}},
+			CellLabel->"In[5]:="
+		],
+		Cell[
+			BoxData["4"],
+			"Output",
+			CellChangeTimes->{3.928063216496982*^9},
+			CellLabel->"Out[5]="
+		]
+	}, Open],
+	Splice @ {
+		MarkdownElement["CodeBlock", "wolfram,cell:Input", "2 + 2"]
+	}
+]
