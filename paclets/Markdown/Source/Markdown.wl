@@ -51,6 +51,33 @@ MarkdownParse[s_?StringQ] := Module[{result},
 
 (*========================================================*)
 
+SetFallthroughError[CreateMarkdownNotebook]
+
+CreateMarkdownNotebook[] := Module[{
+
+},
+	NotebookPut @ Notebook[
+		{},
+		StyleDefinitions -> FrontEnd`FileName[
+			{"ConnorGray"},
+			"Markdown.nb",
+			CharacterEncoding -> "UTF-8"
+		]
+	]
+]
+
+CreateMarkdownNotebook[markdown0_?StringQ] := Module[{
+	markdown = MarkdownParse[markdown0]
+},
+	(* TODO: Improve error handling, if this can even error *)
+	RaiseAssert[MatchQ[markdown, {___MarkdownElement}]];
+
+	(* FIXME: Does not exist yet. *)
+	(* MarkdownToNotebook[markdown] *)
+]
+
+(*========================================================*)
+
 SetFallthroughError[ExportMarkdown]
 
 ExportMarkdown[dest_, expr_] := Module[{
