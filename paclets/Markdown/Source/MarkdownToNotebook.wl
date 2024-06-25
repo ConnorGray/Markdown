@@ -114,6 +114,30 @@ inlinesToTextData[inlines0_] := ConfirmReplace[inlines0, {
 
 	MarkdownElement["Text", text_?StringQ] :> text,
 
+	(*-------------------------------------------------*)
+	(* TID:240625/1: Converting inline styles to cells *)
+	(*-------------------------------------------------*)
+
+	MarkdownElement["Code", text_?StringQ] :> StyleBox[text, "Code"],
+
+	MarkdownElement["Strong", strongInlines_List] :> (
+		StyleBox[
+			{Splice @ Map[inlinesToTextData, strongInlines]},
+			FontWeight -> "Bold"
+		]
+	),
+
+	MarkdownElement["Emphasis", emphasisInlines_List] :> (
+		StyleBox[
+			{Splice @ Map[inlinesToTextData, emphasisInlines]},
+			FontSlant -> "Italic"
+		]
+	),
+
+	(*--------------------------------*)
+	(* Error for unrecognized forms   *)
+	(*--------------------------------*)
+
 	other_ :> Raise[
 		MarkdownError,
 		<| "Expression" -> other |>,

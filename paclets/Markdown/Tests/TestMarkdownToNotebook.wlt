@@ -26,3 +26,24 @@ VerificationTest[
 		CharacterEncoding -> "UTF-8"
 	]]
 ]
+
+(* TID:240625/1: Converting inline styles to cells *)
+VerificationTest[
+	First @ MarkdownToNotebook @ MarkdownParse @ StringJoin[
+		"This `Markdown` contains **bold** and *italic* text."
+	],
+	{
+		Cell[
+			TextData[{
+				"This ",
+				StyleBox["Markdown", "Code"],
+				" contains ",
+				StyleBox[{"bold"}, FontWeight -> "Bold"],
+				" and ",
+				StyleBox[{"italic"}, FontSlant -> "Italic"],
+				" text."
+			}],
+			"Text"
+		]
+	}
+]
