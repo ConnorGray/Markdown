@@ -47,3 +47,21 @@ VerificationTest[
 		]
 	}
 ]
+
+(* TID:240625/2: Converting softbreaks to cells *)
+VerificationTest[
+	First @ MarkdownToNotebook @ MarkdownParse @ StringRiffle[{
+		"This is one Markdown paragraph",
+		"split across multiple lines"
+	}, "\n"],
+	{
+		Cell[
+			TextData[{
+				"This is one Markdown paragraph",
+				"\n",
+				"split across multiple lines"
+			}],
+			"Text"
+		]
+	}
+]

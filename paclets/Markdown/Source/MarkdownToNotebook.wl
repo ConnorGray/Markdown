@@ -114,6 +114,9 @@ inlinesToTextData[inlines0_] := ConfirmReplace[inlines0, {
 
 	MarkdownElement["Text", text_?StringQ] :> text,
 
+	(* TID:240625/2: Converting softbreaks to cells *)
+	MarkdownElement["SoftBreak"] :> "\n",
+
 	(*-------------------------------------------------*)
 	(* TID:240625/1: Converting inline styles to cells *)
 	(*-------------------------------------------------*)
