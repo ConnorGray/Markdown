@@ -21,6 +21,12 @@ CreateMarkdownNotebook
 ConvertToMarkdownElement
 MarkdownToNotebook
 
+(*------------------------------------*)
+(* FrontEnd File Menu Hooks           *)
+(*------------------------------------*)
+
+MarkdownNotebookOpen
+
 MarkdownError
 
 ExportMarkdown::usage = "ExportMarkdown[dest$, expr$] exports data to Markdown."
@@ -77,13 +83,20 @@ CreateMarkdownNotebook[] := Module[{
 	NotebookPut @ MarkdownToNotebook[{}]
 ]
 
-CreateMarkdownNotebook[markdown0_?StringQ] := Module[{
-	markdown = MarkdownParse[markdown0]
+CreateMarkdownNotebook[markdown0_?StringQ] := Handle[_Failure] @ WrapRaised[
+	MarkdownError,
+	"Error creating Markdown notebook"
+] @ Module[{
+	markdown = RaiseConfirm @ MarkdownParse[markdown0]
 },
 	(* TODO: Improve error handling, if this can even error *)
-	RaiseAssert[MatchQ[markdown, {___MarkdownElement}]];
+	RaiseAssert[
+		MatchQ[markdown, {___MarkdownElement}],
+		<| "Markdown" -> markdown |>,
+		"Expected symbolic Markdown {___MarkdownElement}"
+	];
 
-	MarkdownToNotebook[markdown]
+	RaiseConfirm @ MarkdownToNotebook[markdown]
 ]
 
 (*========================================================*)
@@ -120,6 +133,41 @@ ExportMarkdownString[expr_] := Handle[_Failure] @ Module[{
 	];
 
 	markdown
+]
+
+(*========================================================*)
+
+SetFallthroughError[MarkdownNotebookOpen]
+
+MarkdownNotebookOpen[filepath_?StringQ] := Handle[_Failure] @ WrapRaised[
+	MarkdownError,
+	"Error opening Markdown file at ``",
+	InputForm[filepath]
+] @ Module[{
+	markdown,
+	nbObj
+},
+	RaiseAssert[
+		FileType[filepath] === File,
+		"Expected file open request to point to 'File' type file"
+	];
+
+	RaiseAssert[
+		FileExtension[filepath] === "md",
+		"Expected file with .md extension, got ``",
+		InputForm[filepath]
+	];
+
+	markdown = RaiseConfirmMatch[
+		RaiseConfirm @ Import[filepath, "Text"],
+		_?StringQ
+	];
+
+	nbObj = NotebookPut @ RaiseConfirm @ CreateMarkdownNotebook[markdown];
+
+	RaiseConfirmMatch[nbObj, _NotebookObject];
+
+	nbObj
 ]
 
 End[]
