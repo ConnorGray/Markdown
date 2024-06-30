@@ -264,7 +264,7 @@ mod test_readme {
 
 use pulldown_cmark::{self as md, CowStr, Event};
 
-pub use pulldown_cmark::HeadingLevel;
+pub use pulldown_cmark::{HeadingLevel, LinkType};
 
 //======================================
 // AST Representation
@@ -277,6 +277,7 @@ pub use pulldown_cmark::HeadingLevel;
 pub enum Block {
     /// CommonMark: [paragraphs](https://spec.commonmark.org/0.30/#paragraphs)
     Paragraph(Inlines),
+
     /// CommonMark: [lists](https://spec.commonmark.org/0.30/#lists)
     List(Vec<ListItem>),
     /// CommonMark: [ATX heading](https://spec.commonmark.org/0.30/#atx-heading)
@@ -323,16 +324,91 @@ pub struct ListItem(pub Vec<Block>);
 /// (CommonMark: [inlines](https://spec.commonmark.org/0.30/#inlines))
 #[derive(Debug, Clone, PartialEq)]
 pub enum Inline {
+    /// CommonMark: [textual content](https://spec.commonmark.org/0.30/#textual-content)
+    ///
+    /// ```
+    /// # use markdown_ast::Inline;
+    /// #
+    /// assert_eq!(
+    ///     Inline::parse("some plain text"),
+    ///     Inline::Text("some plain text".to_owned())
+    /// );
+    /// ```
     Text(String),
+
     /// CommonMark: [emphasis](https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis)
+    ///
+    /// ```
+    /// # use markdown_ast::{Inline, Inlines};
+    /// #
+    /// assert_eq!(
+    ///     Inline::parse("*emphasized content*"),
+    ///     Inline::Emphasis(Inlines(vec![
+    ///         Inline::Text("emphasized content".to_owned())
+    ///     ]))
+    /// );
+    /// ```
     Emphasis(Inlines),
+
     /// CommonMark: [strong emphasis](https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis)
+    ///
+    /// ```
+    /// # use markdown_ast::{Inline, Inlines};
+    /// #
+    /// assert_eq!(
+    ///     Inline::parse("**strong content**"),
+    ///     Inline::Strong(Inlines(vec![
+    ///         Inline::Text("strong content".to_owned())
+    ///     ]))
+    /// );
+    /// ```
     Strong(Inlines),
+
     /// Strikethrough styled text. (Non-standard.)
+    ///
+    /// ```
+    /// # use markdown_ast::{Inline, Inlines};
+    /// #
+    /// assert_eq!(
+    ///     Inline::parse("~~struck-through content~~"),
+    ///     Inline::Strikethrough(Inlines(vec![
+    ///         Inline::Text("struck-through content".to_owned())
+    ///     ]))
+    /// );
+    /// ```
     Strikethrough(Inlines),
+
     /// CommonMark: [code spans](https://spec.commonmark.org/0.30/#code-spans)
+    ///
+    /// ```
+    /// # use markdown_ast::Inline;
+    /// #
+    /// assert_eq!(
+    ///     Inline::parse("`fn code()`"),
+    ///     Inline::Code("fn code()".to_owned())
+    /// );
+    /// ```
     Code(String),
+
     /// CommonMark: [links](https://spec.commonmark.org/0.30/#links)
+    ///
+    /// Example: Inline link with title:
+    ///
+    /// ```
+    /// # use markdown_ast::{Inline, Inlines, LinkType};
+    /// #
+    /// assert_eq!(
+    ///     Inline::parse("[my website](connorgray.com \"Connor Gray's website\")"),
+    ///     Inline::Link {
+    ///         link_type: LinkType::Inline,
+    ///         dest_url: "connorgray.com".to_owned(),
+    ///         title: "Connor Gray's website".to_owned(),
+    ///         id: "".to_owned(),
+    ///         content_text: Inlines::plain_text("my website")
+    ///     }
+    /// );
+    /// ```
+    //
     // TODO:
     //  Document every type of Inline::Link value and what its equivalent source
     //  is.
@@ -349,6 +425,7 @@ pub enum Inline {
     },
     /// CommonMark: [soft line breaks](https://spec.commonmark.org/0.30/#soft-line-breaks)
     SoftBreak,
+
     /// CommonMark: [hard line breaks](https://spec.commonmark.org/0.30/#hard-line-breaks)
     HardBreak,
 }
@@ -527,6 +604,51 @@ fn default_to_markdown_options() -> pulldown_cmark_to_cmark::Options<'static> {
 //======================================
 
 impl Inline {
+    /// Parse a piece of simple input into an [`Inline`].
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the provided Markdown is not a trivial
+    /// piece of inline content.
+    ///
+    /// # Examples
+    ///
+    /// Parse a few different kinds of simple inline Markdown content:
+    ///
+    /// ```
+    /// use markdown_ast::{Inline, Inlines};
+    ///
+    /// assert_eq!(Inline::parse("hello"), Inline::Text("hello".to_owned()));
+    ///
+    /// assert_eq!(Inline::parse("`foo`"), Inline::Code("foo".to_owned()));
+    ///
+    /// assert_eq!(
+    ///     Inline::parse("**HELLO**"),
+    ///     Inline::Strong(Inlines(vec![Inline::Text("HELLO".to_owned())]))
+    /// );
+    /// ```
+    pub fn parse(input: &str) -> Self {
+        Self::try_parse(input).unwrap_or_else(|err| {
+            panic!("Inline::parse: provided Markdown is not a simple Inline element, parsed to: `{err:?}`")
+        })
+    }
+
+    /// Parse a piece of simple input into an [`Inline`].
+    ///
+    /// If the provided input was not a simple [`Inline`], the full parsed
+    /// Markdown AST will be returned as an error.
+    pub fn try_parse(input: &str) -> Result<Self, Vec<Block>> {
+        let ast = markdown_to_ast(input);
+
+        match ast.as_slice() {
+            [Block::Paragraph(Inlines(inlines))] => match inlines.as_slice() {
+                [inline] => return Ok(inline.clone()),
+                _ => return Err(ast),
+            },
+            _ => return Err(ast),
+        }
+    }
+
     /// Construct a inline containing a piece of plain text.
     pub fn plain_text<S: Into<String>>(s: S) -> Self {
         Inline::Text(s.into())
