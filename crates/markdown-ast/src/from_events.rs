@@ -58,14 +58,16 @@ pub(crate) fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                     // Inline content
                     //
                     Tag::Emphasis => {
-                        text_spans.push(Inline::Emphasis(unwrap_text(events)));
+                        text_spans
+                            .push(Inline::Emphasis(unwrap_inlines(events)));
                     },
                     Tag::Strong => {
-                        text_spans.push(Inline::Strong(unwrap_text(events)));
+                        text_spans.push(Inline::Strong(unwrap_inlines(events)));
                     },
                     Tag::Strikethrough => {
-                        text_spans
-                            .push(Inline::Strikethrough(unwrap_text(events)));
+                        text_spans.push(Inline::Strikethrough(unwrap_inlines(
+                            events,
+                        )));
                     },
 
                     Tag::Link {
@@ -74,7 +76,7 @@ pub(crate) fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         title,
                         id,
                     } => {
-                        let content_text = unwrap_text(events);
+                        let content_text = unwrap_inlines(events);
 
                         text_spans.push(Inline::Link {
                             link_type,
@@ -96,12 +98,14 @@ pub(crate) fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         classes: _,
                         attrs: _,
                     } => {
-                        complete
-                            .push(Block::Heading(level, unwrap_text(events)));
+                        complete.push(Block::Heading(
+                            level,
+                            unwrap_inlines(events),
+                        ));
                     },
                     // TODO(test):
                     //     Is this disappearance of the Paragraph tag correct?
-                    Tag::Paragraph => text_spans.extend(unwrap_text(events)),
+                    Tag::Paragraph => text_spans.extend(unwrap_inlines(events)),
                     // TODO: Include the list start number in the metadata
                     Tag::List(_start) => {
                         let mut items: Vec<ListItem> = Vec::new();
@@ -126,7 +130,7 @@ pub(crate) fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                         complete.extend(ast_events_to_ast(events));
                     },
                     Tag::CodeBlock(kind) => {
-                        let text_spans = unwrap_text(events);
+                        let text_spans = unwrap_inlines(events);
                         let code_text = text_to_string(&text_spans);
 
                         let kind = CodeBlockKind::from_pulldown_cmark(kind);
@@ -154,7 +158,7 @@ pub(crate) fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
 
                         for table_cell in header_events {
                             let table_cell_text =
-                                unwrap_text(unwrap_table_cell(table_cell));
+                                unwrap_inlines(unwrap_table_cell(table_cell));
 
                             headers.push(table_cell_text);
                         }
@@ -173,8 +177,9 @@ pub(crate) fn ast_events_to_ast(events: Vec<UnflattenedEvent>) -> Vec<Block> {
                             let mut row = Vec::new();
 
                             for table_cell in row_events {
-                                let table_cell_text =
-                                    unwrap_text(unwrap_table_cell(table_cell));
+                                let table_cell_text = unwrap_inlines(
+                                    unwrap_table_cell(table_cell),
+                                );
 
                                 row.push(table_cell_text);
                             }
@@ -243,7 +248,7 @@ fn is_inline(event: &UnflattenedEvent) -> bool {
     }
 }
 
-fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
+fn unwrap_inlines(events: Vec<UnflattenedEvent>) -> Inlines {
     let mut text_spans: Vec<Inline> = vec![];
 
     for event in events {
@@ -270,13 +275,13 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
             },
             UnflattenedEvent::Nested { tag, events } => match tag {
                 Tag::Emphasis => {
-                    text_spans.push(Inline::Emphasis(unwrap_text(events)));
+                    text_spans.push(Inline::Emphasis(unwrap_inlines(events)));
                 },
                 Tag::Strong => {
-                    text_spans.push(Inline::Strong(unwrap_text(events)));
+                    text_spans.push(Inline::Strong(unwrap_inlines(events)));
                 },
                 Tag::Strikethrough => {
-                    text_spans.push(Inline::Strikethrough(unwrap_text(events)));
+                    text_spans.push(Inline::Strikethrough(unwrap_inlines(events)));
                 },
                 Tag::Paragraph => {
                     // If this is a separate paragraph, insert two hardbreaks
@@ -288,7 +293,7 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
                         text_spans.push(Inline::HardBreak);
                         text_spans.push(Inline::HardBreak);
                     }
-                    text_spans.extend(unwrap_text(events))
+                    text_spans.extend(unwrap_inlines(events))
                 },
                 Tag::Link {
                     link_type,
@@ -296,7 +301,7 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
                     title,
                     id,
                 } => {
-                    let content_text = unwrap_text(events);
+                    let content_text = unwrap_inlines(events);
 
                     text_spans.push(Inline::Link {
                         link_type,
@@ -312,7 +317,7 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
                     title,
                     id
                 } => {
-                    let image_description = unwrap_text(events);
+                    let image_description = unwrap_inlines(events);
 
                     text_spans.push(Inline::Image {
                         link_type,
