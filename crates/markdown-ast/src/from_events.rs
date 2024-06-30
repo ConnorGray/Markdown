@@ -306,7 +306,41 @@ fn unwrap_text(events: Vec<UnflattenedEvent>) -> Inlines {
                         content_text,
                     })
                 },
-                _ => todo!("handle {tag:?}"),
+                Tag::Image {
+                    link_type,
+                    dest_url,
+                    title,
+                    id
+                } => {
+                    let image_description = unwrap_text(events);
+
+                    text_spans.push(Inline::Image {
+                        link_type,
+                        dest_url: dest_url.to_string(),
+                        title: title.to_string(),
+                        id: id.to_string(),
+                        image_description,
+                    })
+                },
+
+                //--------------------------
+                // Illegal in inline content
+                //--------------------------
+
+                Tag::Heading { .. }
+                | Tag::BlockQuote(_)
+                | Tag::CodeBlock(_)
+                | Tag::HtmlBlock
+                | Tag::List(_)
+                | Tag::Item
+                | Tag::FootnoteDefinition(_)
+                | Tag::Table(_)
+                | Tag::TableHead
+                | Tag::TableRow
+                | Tag::TableCell
+                | Tag::MetadataBlock(_) => panic!(
+                    "unexpected non-inline element inside inlines parse context: {tag:?}"
+                ),
             },
         }
     }

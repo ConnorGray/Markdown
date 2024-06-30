@@ -173,6 +173,22 @@ fn inlines_to_events<'ast>(
                 events,
                 |events| inlines_to_events(content_text, events),
             ),
+            Inline::Image {
+                link_type,
+                dest_url,
+                title,
+                id,
+                image_description,
+            } => wrap(
+                Tag::Image {
+                    link_type: *link_type,
+                    dest_url: CowStr::from(dest_url.as_str()),
+                    title: CowStr::from(title.as_str()),
+                    id: CowStr::from(id.as_str()),
+                },
+                events,
+                |events| inlines_to_events(image_description, events),
+            ),
             Inline::SoftBreak => events.push(Event::SoftBreak),
             Inline::HardBreak => events.push(Event::HardBreak),
         }

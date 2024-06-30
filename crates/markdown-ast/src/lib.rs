@@ -423,6 +423,37 @@ pub enum Inline {
         /// CommonMark: [link text](https://spec.commonmark.org/0.30/#link-text)
         content_text: Inlines,
     },
+
+    /// CommonMark: [images](https://spec.commonmark.org/0.30/#images)
+    ///
+    /// Example: Inline image link:
+    ///
+    /// ```
+    /// # use markdown_ast::{Inline, Inlines, LinkType};
+    /// #
+    /// assert_eq!(
+    ///     Inline::parse("![cat photo](example.org/photo.png)"),
+    ///     Inline::Image {
+    ///         link_type: LinkType::Inline,
+    ///         dest_url: "example.org/photo.png".to_owned(),
+    ///         title: "".to_owned(),
+    ///         id: "".to_owned(),
+    ///         image_description: Inlines::plain_text("cat photo")
+    ///     }
+    /// );
+    /// ```
+    Image {
+        link_type: md::LinkType,
+        /// CommonMark: [link destination](https://spec.commonmark.org/0.30/#link-destination)
+        dest_url: String,
+        /// CommonMark: [link title](https://spec.commonmark.org/0.30/#link-title)
+        title: String,
+        /// CommonMark: [link label](https://spec.commonmark.org/0.30/#link-label)
+        id: String,
+        /// CommonMark: [image description](https://spec.commonmark.org/0.30/#image-description)
+        image_description: Inlines,
+    },
+
     /// CommonMark: [soft line breaks](https://spec.commonmark.org/0.30/#soft-line-breaks)
     SoftBreak,
 

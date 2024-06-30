@@ -441,6 +441,9 @@ fn text_to_boxes(text: Inlines) -> Expr {
                     ),
                 ],
             ),
+            Inline::Image { .. } => {
+                todo!("Support Image link conversion to notebook")
+            },
             Inline::SoftBreak => Expr::string(" "),
             Inline::HardBreak => Expr::string("\n"),
         };

@@ -167,6 +167,20 @@ fn inline_to_expr(span: &Inline) -> Expr {
             inlines_to_expr(content_text),
             Expr::string(dest_url),
         ],
+        Inline::Image {
+            // FIXME: Pass through this link type
+            link_type: _,
+            dest_url,
+            // FIXME: Pass through this link title as well
+            title: _,
+            // FIXME: Pass through this link id
+            id: _,
+            image_description,
+        } => vec![
+            Expr::string("Image"),
+            inlines_to_expr(image_description),
+            Expr::string(dest_url),
+        ],
         Inline::SoftBreak => vec![Expr::string("SoftBreak")],
         Inline::HardBreak => vec![Expr::string("HardBreak")],
     };
