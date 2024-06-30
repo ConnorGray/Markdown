@@ -124,12 +124,9 @@ markdownToCells[markdown0_] := ConfirmReplace[markdown0, {
 			];
 		];
 
-		Splice @ Map[
-			listItem |-> withBlockStack[
-				"List",
-				markdownToCells[listItem]
-			],
-			listItems
+		withBlockStack[
+			"List",
+			markdownToCells[listItems]
 		]
 	],
 
@@ -180,14 +177,14 @@ inlinesToTextData[inlines0_] := ConfirmReplace[inlines0, {
 
 	MarkdownElement["Strong", strongInlines_List] :> (
 		StyleBox[
-			{Splice @ Map[inlinesToTextData, strongInlines]},
+			{inlinesToTextData[strongInlines]},
 			FontWeight -> "Bold"
 		]
 	),
 
 	MarkdownElement["Emphasis", emphasisInlines_List] :> (
 		StyleBox[
-			{Splice @ Map[inlinesToTextData, emphasisInlines]},
+			{inlinesToTextData[emphasisInlines]},
 			FontSlant -> "Italic"
 		]
 	),
