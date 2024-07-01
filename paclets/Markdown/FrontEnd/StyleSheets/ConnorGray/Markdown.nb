@@ -28,6 +28,11 @@ Notebook[{
 		}
 	],
 
+	Cell[StyleData["Code"],
+		(* Make inline Code appear visually similar in size to Text. *)
+		FontSize -> 13
+	],
+
 	(*================================*)
 	(* New Styles                     *)
 	(*================================*)
